@@ -1,0 +1,6 @@
+__pycache__
+.venv
+build
+dist
+tools/texconv/texconv.exe
+tools/texconv/LICENSE.txt
