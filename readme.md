@@ -1,4 +1,3 @@
-===============================
   STUDIO MODDER SUITE v1.0
 ===============================
 Desenvolvido por: Dimitrius Caio Vespasiano
