@@ -51,13 +51,13 @@ class JanelaPrincipal(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        # ---- Sidebar (264px, como proposta ERP) ----
+        # ---- Sidebar (232px, compacta) ----
         sidebar = QFrame()
         sidebar.setObjectName("Sidebar")
-        sidebar.setFixedWidth(264)
+        sidebar.setFixedWidth(232)
         side_layout = QVBoxLayout(sidebar)
-        side_layout.setContentsMargins(14, 20, 14, 14)
-        side_layout.setSpacing(4)
+        side_layout.setContentsMargins(12, 16, 12, 12)
+        side_layout.setSpacing(2)
 
         brand_row = QHBoxLayout()
         brand_row.setSpacing(10)
@@ -116,14 +116,14 @@ class JanelaPrincipal(QMainWindow):
         main_col = QWidget()
         main_col.setObjectName("AppRoot")
         main_layout = QVBoxLayout(main_col)
-        main_layout.setContentsMargins(28, 22, 28, 24)
-        main_layout.setSpacing(16)
+        main_layout.setContentsMargins(20, 16, 20, 16)
+        main_layout.setSpacing(12)
 
         header = QFrame()
         header.setObjectName("HeaderBar")
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(0, 0, 0, 14)
-        header_layout.setSpacing(12)
+        header_layout.setContentsMargins(0, 0, 0, 10)
+        header_layout.setSpacing(10)
 
         title_col = QVBoxLayout()
         title_col.setSpacing(2)
@@ -166,6 +166,29 @@ class JanelaPrincipal(QMainWindow):
         if self.nav_buttons[index] is not None and not self.nav_buttons[index].isChecked():
             self.nav_buttons[index].setChecked(True)
 
+    PRIMARY_KEYWORDS = ("OTIMIZAR", "GERAR", "RENOMEAR", "CALCULAR", "SALVAR", "COPIAR")
+
+    def _tidy_tab(self, tab_widget):
+        # Contém o espalhamento: ritmo vertical uniforme e 1 ação primária
+        # por aba, sem reescrever a lógica de cada ferramenta.
+        layout = tab_widget.layout()
+        if layout is not None:
+            try:
+                layout.setContentsMargins(16, 16, 16, 16)
+                layout.setSpacing(10)
+            except Exception:
+                pass
+        try:
+            for btn in tab_widget.findChildren(QPushButton):
+                text = (btn.text() or "").upper()
+                if any(k in text for k in self.PRIMARY_KEYWORDS):
+                    if btn.objectName() != "NavButton":
+                        btn.setObjectName("PrimaryButton")
+                        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                    break
+        except Exception:
+            pass
+
     def ensure_tab_loaded(self, index):
         if index < 0 or index >= len(self.tab_definitions):
             return
@@ -174,6 +197,7 @@ class JanelaPrincipal(QMainWindow):
 
         _title, factory = self.tab_definitions[index]
         tab_widget = factory()
+        self._tidy_tab(tab_widget)
         self.loaded_tabs[index] = tab_widget
         old = self.stack.widget(index)
         self.stack.removeWidget(old)
