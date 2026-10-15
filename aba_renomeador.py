@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView,
     QComboBox, QCheckBox, QLineEdit, QListWidget, QListWidgetItem,
-    QMessageBox, QFrame, QGridLayout, QStackedWidget
+    QMessageBox, QFrame, QGridLayout, QStackedWidget, QSizePolicy
 )
 from PySide6.QtCore import Qt
 from app_state import append_history
@@ -59,6 +59,7 @@ class AbaRenomeador(QWidget):
         # ---------- PASSO 1: arquivos ----------
         page1 = QFrame()
         page1.setObjectName("Panel")
+        page1.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         l1 = QVBoxLayout(page1)
         l1.setContentsMargins(24, 24, 24, 24)
         l1.setSpacing(10)
@@ -181,6 +182,7 @@ class AbaRenomeador(QWidget):
         sum_card = QFrame()
         sum_card.setObjectName("Panel")
         sum_card.setFixedWidth(620)
+        sum_card.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Maximum)
         sum_lay = QVBoxLayout(sum_card)
         sum_lay.setContentsMargins(24, 24, 24, 24)
         sum_lay.setSpacing(10)

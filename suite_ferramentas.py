@@ -182,11 +182,10 @@ class JanelaPrincipal(QMainWindow):
         if self.nav_buttons[index] is not None and not self.nav_buttons[index].isChecked():
             self.nav_buttons[index].setChecked(True)
 
-    PRIMARY_KEYWORDS = ("OTIMIZAR", "GERAR", "RENOMEAR", "CALCULAR", "SALVAR", "COPIAR")
-
     def _tidy_tab(self, tab_widget):
-        # Contém o espalhamento: ritmo vertical uniforme e 1 ação primária
-        # por aba, sem reescrever a lógica de cada ferramenta.
+        # Apenas ritmo vertical. A ação primária de cada aba é marcada na
+        # própria aba: detectar por palavra ("copiar", "gerar") promovia
+        # botões secundários e criava dois primários na mesma tela.
         layout = tab_widget.layout()
         if layout is not None:
             try:
@@ -194,17 +193,6 @@ class JanelaPrincipal(QMainWindow):
                 layout.setSpacing(10)
             except Exception:
                 pass
-        try:
-            for btn in tab_widget.findChildren(QPushButton):
-                if btn.objectName():
-                    continue
-                text = (btn.text() or "").upper()
-                if any(k in text for k in self.PRIMARY_KEYWORDS):
-                    btn.setObjectName("PrimaryButton")
-                    btn.setCursor(Qt.CursorShape.PointingHandCursor)
-                    break
-        except Exception:
-            pass
 
     def ensure_tab_loaded(self, index):
         if index < 0 or index >= len(self.tab_definitions):

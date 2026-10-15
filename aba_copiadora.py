@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QSpinBox, QLineEdit, QListWidget, QListWidgetItem, QFileDialog,
     QCheckBox, QComboBox, QTextEdit, QMessageBox, QDialog, QGridLayout,
-    QAbstractItemView, QMenu, QFrame, QStackedWidget
+    QAbstractItemView, QMenu, QFrame, QStackedWidget, QSizePolicy
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor, QTextFormat, QTextCharFormat, QFont
@@ -104,12 +104,16 @@ class AbaCopiadora(QWidget):
 
         # ---------- PASSO 1: fonte ----------
         page1 = QWidget()
-        p1_wrap = QHBoxLayout(page1)
-        p1_wrap.setContentsMargins(0, 8, 0, 0)
-        p1_wrap.addStretch()
         card1 = QFrame()
         card1.setObjectName("Panel")
         card1.setFixedWidth(620)
+        # Abraça o conteúdo: sem isso o QVBoxLayout estica cada linha até
+        # preencher a tela e abre buracos verticais entre os campos.
+        card1.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Maximum)
+        l1_wrap = QVBoxLayout(page1)
+        l1_wrap.setContentsMargins(0, 8, 0, 0)
+        l1_wrap.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
+        l1_wrap.addWidget(card1)
         l1 = QVBoxLayout(card1)
         l1.setContentsMargins(24, 24, 24, 24)
         l1.setSpacing(10)
@@ -137,8 +141,6 @@ class AbaCopiadora(QWidget):
         qty_row.addWidget(self.qty_spin)
         l1.addLayout(qty_row)
         l1.addWidget(hint("O arquivo base conta como 1 — para gerar 35 arquivos novos, peça 36."))
-        p1_wrap.addWidget(card1)
-        p1_wrap.addStretch()
         self.step_stack.addWidget(page1)
 
         # ---------- PASSO 2: nome ----------
@@ -263,6 +265,7 @@ class AbaCopiadora(QWidget):
         sum_card = QFrame()
         sum_card.setObjectName("Panel")
         sum_card.setFixedWidth(380)
+        sum_card.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Maximum)
         sum_lay = QVBoxLayout(sum_card)
         sum_lay.setContentsMargins(24, 24, 24, 24)
         sum_lay.setSpacing(10)
@@ -287,8 +290,7 @@ class AbaCopiadora(QWidget):
         self.generate_btn.setMinimumHeight(46)
         self.generate_btn.clicked.connect(self.on_generate)
         sum_lay.addWidget(self.generate_btn)
-        sum_lay.addStretch()
-        l3.addWidget(sum_card)
+        l3.addWidget(sum_card, 0, Qt.AlignmentFlag.AlignTop)
 
         int_card = QFrame()
         int_card.setObjectName("Panel")

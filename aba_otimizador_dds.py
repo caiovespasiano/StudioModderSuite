@@ -251,8 +251,8 @@ class AbaOtimizadorDDS(QWidget):
         self.progress_bar.setMaximum(0)
         self.progress_bar.setVisible(False)
         coluna_esquerda.addWidget(self.progress_bar)
-        coluna_esquerda.addStretch()
-        layout_principal.addWidget(panel)
+        coluna_esquerda.addStretch(1)
+        layout_principal.addWidget(panel, 0)
 
         # --- PAINEL DIREITO (resultados) ---
         right_panel = QFrame()

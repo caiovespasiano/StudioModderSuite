@@ -5,7 +5,7 @@ import shutil
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QListWidget, QListWidgetItem,
-    QMessageBox, QFrame, QCheckBox
+    QMessageBox, QFrame, QCheckBox, QSizePolicy
 )
 from PySide6.QtCore import Qt
 from app_state import append_history
@@ -21,14 +21,15 @@ class AbaMultiCopiador(QWidget):
     def setup_ui(self):
         from ui_helpers import step, field, muted, separator, elide_label
 
-        layout_principal = QHBoxLayout(self)
+        layout_principal = QVBoxLayout(self)
         layout_principal.setContentsMargins(0, 0, 0, 0)
-        layout_principal.addStretch()
+        layout_principal.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
 
         content = QVBoxLayout()
         content.setSpacing(12)
         fixed = QWidget()
         fixed.setFixedWidth(700)
+        fixed.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Maximum)
         fixed_layout = QVBoxLayout(fixed)
         fixed_layout.setContentsMargins(0, 0, 0, 0)
         fixed_layout.setSpacing(12)
@@ -80,7 +81,7 @@ class AbaMultiCopiador(QWidget):
         lay_dest.addLayout(dest_head)
 
         self.pastas_list_widget = QListWidget()
-        self.pastas_list_widget.setMinimumHeight(220)
+        self.pastas_list_widget.setMinimumHeight(200)
         self.pastas_list_widget.itemChanged.connect(self._update_dest_count)
         self._empty_state = QLabel("Selecione a pasta raiz para listar as subpastas de destino.")
         self._empty_state.setObjectName("Muted")
@@ -93,14 +94,13 @@ class AbaMultiCopiador(QWidget):
         btn_copiar = QPushButton("Copiar arquivo para pastas selecionadas")
         btn_copiar.setObjectName("PrimaryButton")
         btn_copiar.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_copiar.setMinimumHeight(40)
+        btn_copiar.setMinimumHeight(44)
         btn_copiar.clicked.connect(self.on_copy_files)
         lay_dest.addWidget(btn_copiar)
         fixed_layout.addWidget(card_dest, 1)
 
         content.addWidget(fixed)
         layout_principal.addLayout(content)
-        layout_principal.addStretch()
 
     def on_select_source_file(self):
         filepath, _ = QFileDialog.getOpenFileName(self, "Selecionar Arquivo Fonte")

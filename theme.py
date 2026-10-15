@@ -1,6 +1,21 @@
 # theme.py — dark graphite denso (conforto visual), tokens calm/neutral.
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QFontDatabase
+
+# Ordem de preferência. "Inter" só é usada se realmente estiver instalada;
+# caso contrário cai na primeira fonte de sistema que existir (nunca em fallback
+# silencioso, que é o que causava larguras e alturas imprevisíveis).
+FONT_PREFERENCE = ["Inter", "Segoe UI Variable Text", "Segoe UI", "Tahoma", "Arial"]
+
+
+def resolve_ui_font():
+    """Devolve a primeira família de FONT_PREFERENCE instalada no sistema."""
+    _ = QApplication.instance()  # garante que o QGuiApplication já existe
+    families = set(QFontDatabase.families())
+    for name in FONT_PREFERENCE:
+        if name in families:
+            return name
+    return QFontDatabase().systemFont(QFontDatabase.SystemFont.GeneralFont).family()
 
 APP_QSS = """
 QMainWindow { background: #141414; }
@@ -12,9 +27,11 @@ QLabel#SectionTitle { font-size: 20px; font-weight: 700; color: #e9e9e9; }
 QLabel#SectionSubtitle { font-size: 12px; color: #9a9a9a; }
 QLabel#Muted { color: #8f8f8f; font-size: 12px; }
 QLabel#Link { color: #a5b4fc; font-size: 12px; }
+QLabel { color: #d6d6d6; }
 QLabel#StepTitle { font-size: 11px; font-weight: 700; color: #8f8f8f; }
-QLabel#FieldLabel { font-size: 12px; font-weight: 500; color: #b5b5b5; }
-QLabel#Hint { font-size: 12px; color: #8f8f8f; }
+QLabel#FieldLabel { font-size: 11px; font-weight: 600; color: #7e7e7e; }
+QLabel#FieldValue { font-size: 13px; color: #d6d6d6; }
+QLabel#Hint { font-size: 11px; color: #7e7e7e; }
 QLineEdit#PreviewReadout { font-size: 14px; font-weight: 600; background: #202020; padding: 9px 10px; }
 QFrame#Panel { background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 12px; }
 QFrame#Separator { border: none; border-top: 1px solid #2a2a2a; }
@@ -102,7 +119,8 @@ def apply_theme(app=None):
     if app is None:
         return
     app.setProperty("smsThemeApplied", True)
-    base = QFont("Inter, Segoe UI", 10)
+    family = resolve_ui_font()
+    base = QFont(family, 10)
     base.setStyleHint(QFont.StyleHint.SansSerif)
     app.setFont(base)
     app.setStyleSheet(APP_QSS)
