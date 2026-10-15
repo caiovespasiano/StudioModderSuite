@@ -6,7 +6,7 @@ import traceback
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QComboBox, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
-    QMessageBox, QFrame, QInputDialog
+    QMessageBox, QFrame, QInputDialog, QProgressBar
 )
 from PySide6.QtCore import Qt, QThread, Signal, Slot
 from PySide6.QtGui import QColor, QPalette
@@ -112,23 +112,36 @@ class AbaOtimizadorTGA(QWidget):
         self.refresh_presets()
 
     def setup_ui(self):
-        layout_principal = QHBoxLayout(self); layout_principal.setContentsMargins(12, 12, 12, 12); layout_principal.setSpacing(10)
-        
-        # --- COLUNA ESQUERDA ---
-        coluna_esquerda = QVBoxLayout(); coluna_esquerda.setContentsMargins(0, 0, 10, 0)
-        coluna_esquerda.addWidget(QLabel("<b>1. Selecionar Pasta:</b>"))
-        self.mod_folder_label = QLabel("Nenhuma pasta selecionada"); self.mod_folder_label.setStyleSheet("font-style: italic;")
-        btn_select = QPushButton("Selecionar Pasta Raiz"); btn_select.clicked.connect(self.on_select_mod_folder)
-        coluna_esquerda.addWidget(btn_select); coluna_esquerda.addWidget(self.mod_folder_label)
-        
-        separator1 = QFrame(); separator1.setFrameShape(QFrame.Shape.HLine); separator1.setFrameShadow(QFrame.Shadow.Sunken); coluna_esquerda.addWidget(separator1)
-        
-        coluna_esquerda.addWidget(QLabel("<b>2. Opções de Otimização:</b>"))
-        coluna_esquerda.addWidget(QLabel("Redimensionar TGA maior que:"))
-        self.combo_res_from = QComboBox(); self.combo_res_from.addItems(["8192", "4096", "2048", "1024", "512"]); self.combo_res_from.setCurrentText("2048")
+        from ui_helpers import step, field, hint, muted, separator
+
+        layout_principal = QHBoxLayout(self)
+        layout_principal.setContentsMargins(0, 0, 0, 0)
+        layout_principal.setSpacing(12)
+
+        # --- PAINEL ESQUERDO (fonte + opções + ação) ---
+        panel = QFrame()
+        panel.setObjectName("Panel")
+        panel.setFixedWidth(380)
+        coluna_esquerda = QVBoxLayout(panel)
+        coluna_esquerda.setContentsMargins(16, 16, 16, 16)
+        coluna_esquerda.setSpacing(8)
+
+        coluna_esquerda.addWidget(step("1 · PASTA DO MOD"))
+        self.mod_folder_label = muted("Nenhuma pasta selecionada")
+        coluna_esquerda.addWidget(self.mod_folder_label)
+        btn_select = QPushButton("Selecionar pasta raiz")
+        btn_select.clicked.connect(self.on_select_mod_folder)
+        coluna_esquerda.addWidget(btn_select)
+
+        coluna_esquerda.addWidget(separator())
+        coluna_esquerda.addWidget(step("2 · OPÇÕES"))
+        coluna_esquerda.addWidget(field("Redimensionar TGA maiores que"))
+        self.combo_res_from = QComboBox()
+        self.combo_res_from.addItems(["8192", "4096", "2048", "1024", "512"])
+        self.combo_res_from.setCurrentText("2048")
         coluna_esquerda.addWidget(self.combo_res_from)
-        
-        coluna_esquerda.addWidget(QLabel("Opção de Redimensionamento:"))
+
+        coluna_esquerda.addWidget(field("Redimensionar para"))
         self.combo_res_to = QComboBox()
         self.combo_res_to.addItem("(Não Redimensionar)", 0)
         self.combo_res_to.addItem("Descer 1 Nível", -1)
@@ -136,65 +149,85 @@ class AbaOtimizadorTGA(QWidget):
         self.combo_res_to.setCurrentIndex(0)
         coluna_esquerda.addWidget(self.combo_res_to)
 
-        # ####################################################
-        # ##               NOVA OPÇÃO AQUI                  ##
-        # ####################################################
-        self.check_force_pot = QCheckBox("Forçar Potência de 2 (POT)")
+        self.check_force_pot = QCheckBox("Forçar potência de 2 (POT)")
         self.check_force_pot.setToolTip("Corrige dimensões estranhas (ex: 1896x1179) para a potência de 2 mais próxima (ex: 2048x1024).\nIsso melhora muito a performance no jogo.")
         coluna_esquerda.addWidget(self.check_force_pot)
 
-        self.check_rle = QCheckBox("Usar Compressão RLE")
+        self.check_rle = QCheckBox("Usar compressão RLE")
         self.check_rle.setToolTip("RLE diminui o tamanho do arquivo sem perder qualidade.\nRecomendado deixar marcado.")
         self.check_rle.setChecked(True)
         coluna_esquerda.addWidget(self.check_rle)
 
-        preset_layout = QHBoxLayout()
-        preset_layout.addWidget(QLabel("Preset:"))
+        coluna_esquerda.addWidget(separator())
+        coluna_esquerda.addWidget(step("3 · PRESET"))
         self.combo_presets = QComboBox()
-        self.btn_save_preset = QPushButton("Salvar Preset")
+        coluna_esquerda.addWidget(self.combo_presets)
+        preset_btns = QHBoxLayout()
+        preset_btns.setSpacing(6)
+        self.btn_save_preset = QPushButton("Salvar")
         self.btn_load_preset = QPushButton("Carregar")
         self.btn_delete_preset = QPushButton("Excluir")
         self.btn_save_preset.clicked.connect(self.on_save_preset)
         self.btn_load_preset.clicked.connect(self.on_load_preset)
         self.btn_delete_preset.clicked.connect(self.on_delete_preset)
-        preset_layout.addWidget(self.combo_presets, 1)
-        preset_layout.addWidget(self.btn_save_preset)
-        preset_layout.addWidget(self.btn_load_preset)
-        preset_layout.addWidget(self.btn_delete_preset)
-        coluna_esquerda.addLayout(preset_layout)
-        
-        separator2 = QFrame(); separator2.setFrameShape(QFrame.Shape.HLine); separator2.setFrameShadow(QFrame.Shadow.Sunken); coluna_esquerda.addWidget(separator2)
-        
-        coluna_esquerda.addWidget(QLabel("<b>3. Ação:</b>"))
-        self.btn_scan = QPushButton("1. Escanear TGA"); self.btn_scan.clicked.connect(self.on_scan_textures)
-        coluna_esquerda.addWidget(self.btn_scan)
-        self.btn_optimize = QPushButton("2. OTIMIZAR Selecionadas"); self.btn_optimize.clicked.connect(self.on_optimize_textures); self.btn_optimize.setEnabled(False); self.btn_optimize.setStyleSheet("padding: 8px;")
-        coluna_esquerda.addWidget(self.btn_optimize)
-        self.status_label = QLabel("Pronto."); coluna_esquerda.addWidget(self.status_label)
-        coluna_esquerda.addStretch()
+        preset_btns.addWidget(self.btn_save_preset, 1)
+        preset_btns.addWidget(self.btn_load_preset, 1)
+        preset_btns.addWidget(self.btn_delete_preset, 1)
+        coluna_esquerda.addLayout(preset_btns)
 
-        # --- COLUNA DIREITA ---
-        coluna_direita = QVBoxLayout(); coluna_direita.setContentsMargins(10, 0, 0, 0)
-        coluna_direita.addWidget(QLabel("<b>Resultados:</b>"))
-        self.checkbox_select_all = QCheckBox("Selecionar Todas / Nenhuma"); self.checkbox_select_all.toggled.connect(self.on_toggle_select_all); coluna_direita.addWidget(self.checkbox_select_all)
-        filter_layout = QHBoxLayout()
-        filter_layout.addWidget(QLabel("Filtro:"))
+        coluna_esquerda.addWidget(separator())
+        coluna_esquerda.addWidget(step("4 · EXECUTAR"))
+        self.btn_scan = QPushButton("Escanear TGA")
+        self.btn_scan.clicked.connect(self.on_scan_textures)
+        coluna_esquerda.addWidget(self.btn_scan)
+        self.btn_optimize = QPushButton("Otimizar selecionadas")
+        self.btn_optimize.setObjectName("PrimaryButton")
+        self.btn_optimize.setMinimumHeight(40)
+        self.btn_optimize.clicked.connect(self.on_optimize_textures)
+        self.btn_optimize.setEnabled(False)
+        coluna_esquerda.addWidget(self.btn_optimize)
+        self.status_label = muted("Pronto.")
+        coluna_esquerda.addWidget(self.status_label)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(0)
+        self.progress_bar.setVisible(False)
+        coluna_esquerda.addWidget(self.progress_bar)
+        coluna_esquerda.addStretch()
+        layout_principal.addWidget(panel)
+
+        # --- PAINEL DIREITO (resultados) ---
+        right_panel = QFrame()
+        right_panel.setObjectName("Panel")
+        coluna_direita = QVBoxLayout(right_panel)
+        coluna_direita.setContentsMargins(16, 16, 16, 16)
+        coluna_direita.setSpacing(8)
+        head = QHBoxLayout()
+        head.addWidget(step("RESULTADOS"))
+        head.addStretch()
+        self.results_count = muted("")
+        head.addWidget(self.results_count)
+        head.addWidget(field("Filtro"))
         self.combo_filter = QComboBox()
+        self.combo_filter.setFixedWidth(210)
         self.combo_filter.addItem("Mostrar Tudo", "ALL")
         self.combo_filter.addItem("Somente Marcadas", "CHECKED")
         self.combo_filter.addItem("Somente 8192x8192", "8192")
         self.combo_filter.addItem("Somente para Redimensionar", "TO_OPTIMIZE")
         self.combo_filter.currentIndexChanged.connect(self.update_preview)
-        filter_layout.addWidget(self.combo_filter, 1)
-        coluna_direita.addLayout(filter_layout)
-        
+        head.addWidget(self.combo_filter)
+        coluna_direita.addLayout(head)
+        self.checkbox_select_all = QCheckBox("Selecionar todas / nenhuma")
+        self.checkbox_select_all.toggled.connect(self.on_toggle_select_all)
+        coluna_direita.addWidget(self.checkbox_select_all)
+
         self.tabela_texturas = QTableWidget()
         self.tabela_texturas.setColumnCount(5); self.tabela_texturas.setHorizontalHeaderLabels(["", "Arquivo", "Res. Atual", "Modo", "Nova Res."])
         self.tabela_texturas.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch); self.tabela_texturas.setColumnWidth(0, 30); self.tabela_texturas.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.tabela_texturas.setSortingEnabled(True)
-        coluna_direita.addWidget(self.tabela_texturas)
-        
-        layout_principal.addLayout(coluna_esquerda, 1); layout_principal.addLayout(coluna_direita, 3)
+        coluna_direita.addWidget(self.tabela_texturas, 1)
+        coluna_direita.addWidget(hint("Amarelo = redimensiona · desmarque o que quiser manter"))
+        layout_principal.addWidget(right_panel, 1)
 
         # Conexões de Preview
         self.combo_res_from.currentIndexChanged.connect(self.update_preview)
@@ -204,8 +237,9 @@ class AbaOtimizadorTGA(QWidget):
         self.default_text_brush = self.tabela_texturas.palette().brush(QPalette.ColorRole.Text)
 
     def on_select_mod_folder(self):
+        from ui_helpers import elide_label
         folder = QFileDialog.getExistingDirectory(self, "Selecionar Pasta");
-        if folder: self.mod_folder_path = folder; self.mod_folder_label.setText(f"Pasta: {folder}"); self.mod_folder_label.setStyleSheet("font-style: normal;")
+        if folder: self.mod_folder_path = folder; elide_label(self.mod_folder_label, f"Pasta: {folder}", 330)
 
     def on_toggle_select_all(self, checked):
         state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
@@ -327,6 +361,7 @@ class AbaOtimizadorTGA(QWidget):
         self.scan_results = results 
         self.update_preview()
         self.btn_scan.setEnabled(True)
+        self.progress_bar.setVisible(False)
         append_history("Otimizador TGA", "Scan", f"Texturas encontradas: {len(results)}")
 
     @Slot()
@@ -389,6 +424,7 @@ class AbaOtimizadorTGA(QWidget):
         self.checkbox_select_all.blockSignals(True)
         self.checkbox_select_all.setChecked(files_to_optimize > 0)
         self.checkbox_select_all.blockSignals(False)
+        self.results_count.setText(f"{visible_rows} visíveis · {files_to_optimize} para redimensionar")
         self.status_label.setText(f"Concluído! {visible_rows} visíveis de {len(self.scan_results)} arquivos. {files_to_optimize} para redimensionar.")
         self.btn_optimize.setEnabled(files_to_optimize > 0)
 
@@ -399,6 +435,7 @@ class AbaOtimizadorTGA(QWidget):
 
         self.btn_scan.setEnabled(False); self.btn_optimize.setEnabled(False)
         self.status_label.setText("Escaneando...")
+        self.progress_bar.setVisible(True)
         self.checkbox_select_all.blockSignals(True)
         self.checkbox_select_all.setChecked(False)
         self.checkbox_select_all.blockSignals(False)
@@ -414,6 +451,7 @@ class AbaOtimizadorTGA(QWidget):
     @Slot(str)
     def on_optimize_finished(self, final_message):
         self.btn_scan.setEnabled(True); self.btn_optimize.setEnabled(False)
+        self.progress_bar.setVisible(False)
         self.status_label.setText("Otimização concluída.")
         append_history("Otimizador TGA", "Otimização", f"Selecionadas: {self.last_optimize_total} | {final_message.splitlines()[0] if final_message else ''}")
         QMessageBox.information(self, "Sucesso", final_message)
@@ -437,6 +475,7 @@ class AbaOtimizadorTGA(QWidget):
 
         self.btn_scan.setEnabled(False); self.btn_optimize.setEnabled(False)
         self.status_label.setText("Processando...")
+        self.progress_bar.setVisible(True)
 
         self.worker_thread = WorkerThread(
             mode="optimize",

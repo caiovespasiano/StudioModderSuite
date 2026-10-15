@@ -12,6 +12,14 @@ QLabel#SectionTitle { font-size: 20px; font-weight: 700; color: #e9e9e9; }
 QLabel#SectionSubtitle { font-size: 12px; color: #9a9a9a; }
 QLabel#Muted { color: #8f8f8f; font-size: 12px; }
 QLabel#Link { color: #a5b4fc; font-size: 12px; }
+QLabel#StepTitle { font-size: 11px; font-weight: 700; color: #8f8f8f; }
+QLabel#FieldLabel { font-size: 12px; font-weight: 500; color: #b5b5b5; }
+QLabel#Hint { font-size: 12px; color: #8f8f8f; }
+QLineEdit#PreviewReadout { font-size: 14px; font-weight: 600; background: #202020; padding: 9px 10px; }
+QFrame#Panel { background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 12px; }
+QFrame#Separator { border: none; border-top: 1px solid #2a2a2a; }
+QProgressBar { border: 1px solid #2a2a2a; border-radius: 6px; background: #202020; height: 8px; text-align: center; }
+QProgressBar::chunk { background: #6366f1; border-radius: 6px; }
 QLabel { color: #d6d6d6; }
 QFrame#HeaderBar { background: transparent; border: none; border-bottom: 1px solid #262626; }
 QFrame#LoginCard { background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 16px; }

@@ -9,7 +9,8 @@ import traceback
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QComboBox, QLineEdit, QListWidget, QListWidgetItem,
-    QMessageBox, QFrame, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView, QInputDialog
+    QMessageBox, QFrame, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView, QInputDialog,
+    QProgressBar
 )
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QEvent
 from PySide6.QtGui import QColor, QBrush, QPalette
@@ -155,32 +156,51 @@ class AbaOtimizadorDDS(QWidget):
         self.refresh_presets()
 
     def setup_ui(self):
-        layout_principal = QHBoxLayout(self); layout_principal.setContentsMargins(12, 12, 12, 12); layout_principal.setSpacing(10)
-        
-        coluna_esquerda = QVBoxLayout(); coluna_esquerda.setContentsMargins(0, 0, 10, 0)
-        coluna_esquerda.addWidget(QLabel("<b>1. Selecionar Pasta do Mod:</b>")); self.mod_folder_label = QLabel("Nenhuma pasta selecionada"); self.mod_folder_label.setStyleSheet("font-style: italic;")
-        btn_select_mod_folder = QPushButton("Selecionar Pasta Raiz do Mod"); btn_select_mod_folder.clicked.connect(self.on_select_mod_folder)
-        coluna_esquerda.addWidget(btn_select_mod_folder); coluna_esquerda.addWidget(self.mod_folder_label); coluna_esquerda.addSpacing(10)
-        coluna_esquerda.addWidget(QLabel("<b>2. Ferramenta (texconv.exe):</b>")); self.texconv_label = QLabel("Nenhum executável selecionado"); self.texconv_label.setStyleSheet("font-style: italic;")
-        btn_select_texconv = QPushButton("Localizar texconv.exe"); btn_select_texconv.clicked.connect(self.on_select_texconv)
-        coluna_esquerda.addWidget(btn_select_texconv); coluna_esquerda.addWidget(self.texconv_label)
-        separator1 = QFrame(); separator1.setFrameShape(QFrame.Shape.HLine); separator1.setFrameShadow(QFrame.Shadow.Sunken); coluna_esquerda.addWidget(separator1)
-        
-        coluna_esquerda.addWidget(QLabel("<b>3. Opções de Otimização:</b>"))
-        
-        coluna_esquerda.addWidget(QLabel("Otimizar texturas com dimensão MAIOR que:"))
-        self.combo_res_from = QComboBox(); self.combo_res_from.addItems(["8192", "4096", "2048", "1024", "512", "256", "128"]); self.combo_res_from.setCurrentText("1024")
+        from ui_helpers import step, field, hint, muted, separator
+
+        layout_principal = QHBoxLayout(self)
+        layout_principal.setContentsMargins(0, 0, 0, 0)
+        layout_principal.setSpacing(12)
+
+        # --- PAINEL ESQUERDO (fonte + opções + ação) ---
+        panel = QFrame()
+        panel.setObjectName("Panel")
+        panel.setFixedWidth(380)
+        coluna_esquerda = QVBoxLayout(panel)
+        coluna_esquerda.setContentsMargins(16, 16, 16, 16)
+        coluna_esquerda.setSpacing(8)
+
+        coluna_esquerda.addWidget(step("1 · PASTA DO MOD"))
+        self.mod_folder_label = muted("Nenhuma pasta selecionada")
+        coluna_esquerda.addWidget(self.mod_folder_label)
+        btn_select_mod_folder = QPushButton("Selecionar pasta raiz do mod")
+        btn_select_mod_folder.clicked.connect(self.on_select_mod_folder)
+        coluna_esquerda.addWidget(btn_select_mod_folder)
+
+        coluna_esquerda.addWidget(step("2 · TEXCONV"))
+        self.texconv_label = muted("Nenhum executável selecionado")
+        coluna_esquerda.addWidget(self.texconv_label)
+        btn_select_texconv = QPushButton("Localizar texconv.exe")
+        btn_select_texconv.clicked.connect(self.on_select_texconv)
+        coluna_esquerda.addWidget(btn_select_texconv)
+
+        coluna_esquerda.addWidget(separator())
+        coluna_esquerda.addWidget(step("3 · OPÇÕES"))
+        coluna_esquerda.addWidget(field("Otimizar texturas maiores que"))
+        self.combo_res_from = QComboBox()
+        self.combo_res_from.addItems(["8192", "4096", "2048", "1024", "512", "256", "128"])
+        self.combo_res_from.setCurrentText("1024")
         coluna_esquerda.addWidget(self.combo_res_from)
 
-        coluna_esquerda.addWidget(QLabel("Opção de Redimensionamento:"))
+        coluna_esquerda.addWidget(field("Redimensionar para"))
         self.combo_res_to = QComboBox()
         self.combo_res_to.addItem("(Não Redimensionar)", 0)
         self.combo_res_to.addItem("Descer 1 Nível", -1)
         self.combo_res_to.addItem("4096", 4096); self.combo_res_to.addItem("2048", 2048); self.combo_res_to.addItem("1024", 1024); self.combo_res_to.addItem("512", 512)
-        self.combo_res_to.setCurrentIndex(0) # Padrão "Não Redimensionar"
+        self.combo_res_to.setCurrentIndex(0)
         coluna_esquerda.addWidget(self.combo_res_to)
-        
-        coluna_esquerda.addWidget(QLabel("Forçar Formato de Saída:"))
+
+        coluna_esquerda.addWidget(field("Formato de saída"))
         self.combo_format_to = QComboBox()
         self.combo_format_to.addItem("(Manter Original)", "MANTER")
         self.combo_format_to.addItem("BC1_UNORM (DXT1 - Sem Alpha)", "BC1_UNORM")
@@ -189,52 +209,82 @@ class AbaOtimizadorDDS(QWidget):
         self.combo_format_to.addItem("BC7_UNORM (DX11 - Alta Qualidade)", "BC7_UNORM")
         coluna_esquerda.addWidget(self.combo_format_to)
 
-        self.check_protect_alpha = QCheckBox("Proteger Alfas Modificados")
+        self.check_protect_alpha = QCheckBox("Proteger alfas modificados")
         self.check_protect_alpha.setToolTip("Se marcado, impede que texturas DXT5 com transparência\n"
                                             "sejam forçadas para DXT1, mesmo que você mande.\n"
                                             "AVISO: Torna o escaneamento MUITO mais lento.")
         self.check_protect_alpha.setChecked(True)
         coluna_esquerda.addWidget(self.check_protect_alpha)
 
-        preset_layout = QHBoxLayout()
-        preset_layout.addWidget(QLabel("Preset:"))
+        coluna_esquerda.addWidget(separator())
+        coluna_esquerda.addWidget(step("4 · PRESET"))
         self.combo_presets = QComboBox()
-        self.btn_save_preset = QPushButton("Salvar Preset")
+        coluna_esquerda.addWidget(self.combo_presets)
+        preset_btns = QHBoxLayout()
+        preset_btns.setSpacing(6)
+        self.btn_save_preset = QPushButton("Salvar")
         self.btn_load_preset = QPushButton("Carregar")
         self.btn_delete_preset = QPushButton("Excluir")
         self.btn_save_preset.clicked.connect(self.on_save_preset)
         self.btn_load_preset.clicked.connect(self.on_load_preset)
         self.btn_delete_preset.clicked.connect(self.on_delete_preset)
-        preset_layout.addWidget(self.combo_presets, 1)
-        preset_layout.addWidget(self.btn_save_preset)
-        preset_layout.addWidget(self.btn_load_preset)
-        preset_layout.addWidget(self.btn_delete_preset)
-        coluna_esquerda.addLayout(preset_layout)
-        
-        separator2 = QFrame(); separator2.setFrameShape(QFrame.Shape.HLine); separator2.setFrameShadow(QFrame.Shadow.Sunken); coluna_esquerda.addWidget(separator2)
-        coluna_esquerda.addWidget(QLabel("<b>4. Ação:</b>")); self.btn_scan = QPushButton("1. Escanear Texturas (Gerar Preview)"); self.btn_scan.clicked.connect(self.on_scan_textures)
-        coluna_esquerda.addWidget(self.btn_scan); self.btn_optimize = QPushButton("2. OTIMIZAR Texturas Selecionadas"); self.btn_optimize.clicked.connect(self.on_optimize_textures); self.btn_optimize.setEnabled(False); self.btn_optimize.setStyleSheet("padding: 8px;"); coluna_esquerda.addWidget(self.btn_optimize)
-        self.status_label = QLabel("Pronto."); coluna_esquerda.addWidget(self.status_label); coluna_esquerda.addStretch();
-        
-        coluna_direita = QVBoxLayout(); coluna_direita.setContentsMargins(10, 0, 0, 0)
-        coluna_direita.addWidget(QLabel("<b>Resultados do Escaneamento:</b>")); self.checkbox_select_all = QCheckBox("Selecionar Todas / Nenhuma"); self.checkbox_select_all.toggled.connect(self.on_toggle_select_all); coluna_direita.addWidget(self.checkbox_select_all)
-        filter_layout = QHBoxLayout()
-        filter_layout.addWidget(QLabel("Filtro:"))
+        preset_btns.addWidget(self.btn_save_preset, 1)
+        preset_btns.addWidget(self.btn_load_preset, 1)
+        preset_btns.addWidget(self.btn_delete_preset, 1)
+        coluna_esquerda.addLayout(preset_btns)
+
+        coluna_esquerda.addWidget(separator())
+        coluna_esquerda.addWidget(step("5 · EXECUTAR"))
+        self.btn_scan = QPushButton("Escanear texturas")
+        self.btn_scan.clicked.connect(self.on_scan_textures)
+        coluna_esquerda.addWidget(self.btn_scan)
+        self.btn_optimize = QPushButton("Otimizar selecionadas")
+        self.btn_optimize.setObjectName("PrimaryButton")
+        self.btn_optimize.setMinimumHeight(40)
+        self.btn_optimize.clicked.connect(self.on_optimize_textures)
+        self.btn_optimize.setEnabled(False)
+        coluna_esquerda.addWidget(self.btn_optimize)
+        self.status_label = muted("Pronto.")
+        coluna_esquerda.addWidget(self.status_label)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(0)
+        self.progress_bar.setVisible(False)
+        coluna_esquerda.addWidget(self.progress_bar)
+        coluna_esquerda.addStretch()
+        layout_principal.addWidget(panel)
+
+        # --- PAINEL DIREITO (resultados) ---
+        right_panel = QFrame()
+        right_panel.setObjectName("Panel")
+        coluna_direita = QVBoxLayout(right_panel)
+        coluna_direita.setContentsMargins(16, 16, 16, 16)
+        coluna_direita.setSpacing(8)
+        head = QHBoxLayout()
+        head.addWidget(step("RESULTADOS"))
+        head.addStretch()
+        self.results_count = muted("")
+        head.addWidget(self.results_count)
+        head.addWidget(field("Filtro"))
         self.combo_filter = QComboBox()
+        self.combo_filter.setFixedWidth(210)
         self.combo_filter.addItem("Mostrar Tudo", "ALL")
         self.combo_filter.addItem("Somente Marcadas", "CHECKED")
         self.combo_filter.addItem("Somente 8192x8192", "8192")
         self.combo_filter.addItem("Somente para Otimizar", "TO_OPTIMIZE")
         self.combo_filter.currentIndexChanged.connect(self.update_preview)
-        filter_layout.addWidget(self.combo_filter, 1)
-        coluna_direita.addLayout(filter_layout)
+        head.addWidget(self.combo_filter)
+        coluna_direita.addLayout(head)
+        self.checkbox_select_all = QCheckBox("Selecionar todas / nenhuma")
+        self.checkbox_select_all.toggled.connect(self.on_toggle_select_all)
+        coluna_direita.addWidget(self.checkbox_select_all)
         self.tabela_texturas = QTableWidget()
         self.tabela_texturas.setColumnCount(6); self.tabela_texturas.setHorizontalHeaderLabels(["", "Arquivo", "Res. Atual", "Formato Atual", "Nova Res.", "Novo Formato"])
         self.tabela_texturas.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch); self.tabela_texturas.setColumnWidth(0, 30); self.tabela_texturas.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.tabela_texturas.setSortingEnabled(True)
-        coluna_direita.addWidget(self.tabela_texturas)
-        
-        layout_principal.addLayout(coluna_esquerda, 1); layout_principal.addLayout(coluna_direita, 3)
+        coluna_direita.addWidget(self.tabela_texturas, 1)
+        coluna_direita.addWidget(hint("Amarelo = redimensiona · ciano = troca de formato · arraste na 1ª coluna para marcar em faixa"))
+        layout_principal.addWidget(right_panel, 1)
 
         self.combo_res_from.currentIndexChanged.connect(self.update_preview)
         self.combo_res_to.currentIndexChanged.connect(self.update_preview)
@@ -248,18 +298,22 @@ class AbaOtimizadorDDS(QWidget):
 
 
     def check_for_local_texconv(self):
+        from ui_helpers import elide_label
         local_path = os.path.join("tools", "texconv", "texconv.exe")
         if os.path.exists(local_path):
-            full_path = os.path.abspath(local_path); self.texconv_path = full_path; self.texconv_label.setText(f"Encontrado: {full_path}"); self.texconv_label.setStyleSheet("font-style: normal; color: green;"); self.texconv_label.setToolTip(full_path)
-        else: self.texconv_label.setStyleSheet("font-style: italic; color: red;"); self.texconv_label.setText("texconv.exe não encontrado na pasta 'tools'")
+            full_path = os.path.abspath(local_path); self.texconv_path = full_path; elide_label(self.texconv_label, f"Encontrado: {full_path}", 330)
+        else: self.texconv_label.setText("texconv.exe não encontrado na pasta 'tools'")
 
     def on_select_mod_folder(self):
+        from ui_helpers import elide_label
         folder = QFileDialog.getExistingDirectory(self, "Selecionar Pasta Raiz do Mod");
-        if folder: self.mod_folder_path = folder; self.mod_folder_label.setText(f"Pasta: {folder}"); self.mod_folder_label.setStyleSheet("font-style: normal;")
+        if folder: self.mod_folder_path = folder; elide_label(self.mod_folder_label, f"Pasta: {folder}", 330)
 
     def on_select_texconv(self):
         filepath, _ = QFileDialog.getOpenFileName(self, "Selecionar texconv.exe", "", "Executables (*.exe)");
-        if filepath: self.texconv_path = filepath; self.texconv_label.setText(f"Caminho: {filepath}"); self.texconv_label.setStyleSheet("font-style: normal;")
+        if filepath:
+            from ui_helpers import elide_label
+            self.texconv_path = filepath; elide_label(self.texconv_label, f"Caminho: {filepath}", 330)
 
     def on_toggle_select_all(self, checked):
         state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
@@ -387,6 +441,7 @@ class AbaOtimizadorDDS(QWidget):
         self.tabela_texturas.blockSignals(False)
         self.tabela_texturas.setSortingEnabled(True)
         self.btn_scan.setEnabled(True)
+        self.progress_bar.setVisible(False)
         append_history("Otimizador DDS", "Scan", f"Texturas encontradas: {len(results)}")
         
         self.update_preview()
@@ -490,6 +545,7 @@ class AbaOtimizadorDDS(QWidget):
         self.checkbox_select_all.blockSignals(True)
         self.checkbox_select_all.setChecked(files_to_optimize > 0)
         self.checkbox_select_all.blockSignals(False)
+        self.results_count.setText(f"{visible_rows} visíveis · {files_to_optimize} para otimizar")
         self.status_label.setText(f"{visible_rows} visíveis de {self.tabela_texturas.rowCount()} texturas. {files_to_optimize} para otimizar com as opções atuais.")
         self.btn_optimize.setEnabled(files_to_optimize > 0)
 
@@ -517,6 +573,7 @@ class AbaOtimizadorDDS(QWidget):
 
         self.btn_scan.setEnabled(False); self.btn_optimize.setEnabled(False)
         self.status_label.setText("Escaneando, por favor aguarde...")
+        self.progress_bar.setVisible(True)
         self.checkbox_select_all.blockSignals(True)
         self.checkbox_select_all.setChecked(False)
         self.checkbox_select_all.blockSignals(False)
@@ -538,6 +595,7 @@ class AbaOtimizadorDDS(QWidget):
     @Slot(str)
     def on_optimize_finished(self, final_message):
         self.btn_scan.setEnabled(True); self.btn_optimize.setEnabled(False)
+        self.progress_bar.setVisible(False)
         self.status_label.setText("Otimização concluída. Faça um novo scan para ver os resultados.")
         append_history("Otimizador DDS", "Otimização", f"Selecionadas: {self.last_optimize_total} | {final_message.splitlines()[0] if final_message else ''}")
         QMessageBox.information(self, "Otimização Concluída", final_message)
@@ -582,6 +640,7 @@ class AbaOtimizadorDDS(QWidget):
 
         self.btn_scan.setEnabled(False); self.btn_optimize.setEnabled(False)
         self.status_label.setText("Otimizando, isso pode demorar...")
+        self.progress_bar.setVisible(True)
 
         self.worker_thread = WorkerThread(
             mode="optimize",

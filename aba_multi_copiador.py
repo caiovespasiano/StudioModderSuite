@@ -19,80 +19,93 @@ class AbaMultiCopiador(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
-        # ####################################################
-        # ##               LAYOUT CORRIGIDO AQUI            ##
-        # ##   Usando QVBoxLayout para colocar tudo "em cima" ##
-        # ####################################################
-        layout_principal = QVBoxLayout(self) # <-- Layout principal é VERTICAL
-        layout_principal.setContentsMargins(12, 12, 12, 12)
-        layout_principal.setSpacing(10)
+        from ui_helpers import step, field, muted, separator, elide_label
 
-        # --- 1. Selecionar Arquivo Fonte ---
-        layout_principal.addWidget(QLabel("<b>1. Selecionar Arquivo Fonte:</b>"))
-        
-        layout_arquivo = QHBoxLayout()
-        self.arquivo_fonte_label = QLabel("Nenhum arquivo selecionado")
-        self.arquivo_fonte_label.setStyleSheet("font-style: italic;")
-        btn_select_file = QPushButton("Selecionar Arquivo para Copiar")
+        layout_principal = QHBoxLayout(self)
+        layout_principal.setContentsMargins(0, 0, 0, 0)
+        layout_principal.addStretch()
+
+        content = QVBoxLayout()
+        content.setSpacing(12)
+        fixed = QWidget()
+        fixed.setFixedWidth(700)
+        fixed_layout = QVBoxLayout(fixed)
+        fixed_layout.setContentsMargins(0, 0, 0, 0)
+        fixed_layout.setSpacing(12)
+
+        # --- 1. Arquivo fonte ---
+        card_file = QFrame()
+        card_file.setObjectName("Panel")
+        lay_file = QVBoxLayout(card_file)
+        lay_file.setContentsMargins(16, 16, 16, 16)
+        lay_file.setSpacing(8)
+        lay_file.addWidget(step("1 · ARQUIVO FONTE"))
+        self.arquivo_fonte_label = muted("Nenhum arquivo selecionado")
+        lay_file.addWidget(self.arquivo_fonte_label)
+        btn_select_file = QPushButton("Selecionar arquivo para copiar")
         btn_select_file.clicked.connect(self.on_select_source_file)
-        layout_arquivo.addWidget(self.arquivo_fonte_label)
-        layout_arquivo.addStretch()
-        layout_arquivo.addWidget(btn_select_file)
-        layout_principal.addLayout(layout_arquivo)
+        lay_file.addWidget(btn_select_file)
+        fixed_layout.addWidget(card_file)
 
-        layout_principal.addSpacing(10)
-
-        # --- 2. Selecionar Pasta Raiz ---
-        layout_principal.addWidget(QLabel("<b>2. Selecionar Pasta Raiz (dos destinos):</b>"))
-        
-        layout_pasta = QHBoxLayout()
-        self.pasta_raiz_label = QLabel("Nenhuma pasta selecionada")
-        self.pasta_raiz_label.setStyleSheet("font-style: italic;")
-        btn_select_root_folder = QPushButton("Selecionar Pasta Raiz")
+        # --- 2. Pasta raiz ---
+        card_root = QFrame()
+        card_root.setObjectName("Panel")
+        lay_root = QVBoxLayout(card_root)
+        lay_root.setContentsMargins(16, 16, 16, 16)
+        lay_root.setSpacing(8)
+        lay_root.addWidget(step("2 · PASTA RAIZ DOS DESTINOS"))
+        self.pasta_raiz_label = muted("Nenhuma pasta selecionada")
+        lay_root.addWidget(self.pasta_raiz_label)
+        btn_select_root_folder = QPushButton("Selecionar pasta raiz")
         btn_select_root_folder.clicked.connect(self.on_select_root_folder)
-        layout_pasta.addWidget(self.pasta_raiz_label)
-        layout_pasta.addStretch()
-        layout_pasta.addWidget(btn_select_root_folder)
-        layout_principal.addLayout(layout_pasta)
+        lay_root.addWidget(btn_select_root_folder)
+        fixed_layout.addWidget(card_root)
 
-        separator1 = QFrame(); separator1.setFrameShape(QFrame.Shape.HLine); separator1.setFrameShadow(QFrame.Shadow.Sunken); layout_principal.addWidget(separator1)
-
-        # --- 3. Lista de Destinos ---
-        layout_principal.addWidget(QLabel("<b>3. Selecionar Pastas de Destino:</b>"))
-        
-        self.checkbox_select_all = QCheckBox("Selecionar Todas / Nenhuma")
+        # --- 3. Destinos ---
+        card_dest = QFrame()
+        card_dest.setObjectName("Panel")
+        lay_dest = QVBoxLayout(card_dest)
+        lay_dest.setContentsMargins(16, 16, 16, 16)
+        lay_dest.setSpacing(8)
+        lay_dest.addWidget(step("3 · PASTAS DE DESTINO"))
+        dest_head = QHBoxLayout()
+        self.checkbox_select_all = QCheckBox("Selecionar todas")
         self.checkbox_select_all.toggled.connect(self.on_toggle_select_all)
-        layout_principal.addWidget(self.checkbox_select_all)
-        
+        dest_head.addWidget(self.checkbox_select_all)
+        dest_head.addStretch()
+        self.dest_count = muted("")
+        dest_head.addWidget(self.dest_count)
+        lay_dest.addLayout(dest_head)
+
         self.pastas_list_widget = QListWidget()
-        layout_principal.addWidget(self.pastas_list_widget, 1) # '1' faz a lista expandir
+        self.pastas_list_widget.setMinimumHeight(220)
+        lay_dest.addWidget(self.pastas_list_widget, 1)
 
-        separator2 = QFrame(); separator2.setFrameShape(QFrame.Shape.HLine); separator2.setFrameShadow(QFrame.Shadow.Sunken); layout_principal.addWidget(separator2)
-
-        # --- 4. Ação Final ---
-        layout_principal.addWidget(QLabel("<b>4. Ação Final:</b>"))
-        
-        layout_acao = QHBoxLayout()
-        layout_acao.addStretch() # Empurra o botão para a direita
-        btn_copiar = QPushButton("Copiar Arquivo para Pastas Selecionadas")
+        lay_dest.addWidget(separator())
+        btn_copiar = QPushButton("Copiar arquivo para pastas selecionadas")
+        btn_copiar.setObjectName("PrimaryButton")
+        btn_copiar.setMinimumHeight(40)
         btn_copiar.clicked.connect(self.on_copy_files)
-        btn_copiar.setStyleSheet("padding: 8px;") 
-        layout_acao.addWidget(btn_copiar)
-        layout_principal.addLayout(layout_acao)
+        lay_dest.addWidget(btn_copiar)
+        fixed_layout.addWidget(card_dest, 1)
+
+        content.addWidget(fixed)
+        layout_principal.addLayout(content)
+        layout_principal.addStretch()
 
     def on_select_source_file(self):
         filepath, _ = QFileDialog.getOpenFileName(self, "Selecionar Arquivo Fonte")
         if filepath:
+            from ui_helpers import elide_label
             self.arquivo_fonte = filepath
-            self.arquivo_fonte_label.setText(f"Arquivo: {os.path.basename(filepath)}")
-            self.arquivo_fonte_label.setStyleSheet("font-style: normal;") 
+            elide_label(self.arquivo_fonte_label, f"Arquivo: {os.path.basename(filepath)}", 640)
 
     def on_select_root_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Selecionar Pasta Raiz contendo as subpastas")
         if folder:
+            from ui_helpers import elide_label
             self.pasta_raiz = folder
-            self.pasta_raiz_label.setText(f"Pasta Raiz: {folder}")
-            self.pasta_raiz_label.setStyleSheet("font-style: normal;")
+            elide_label(self.pasta_raiz_label, f"Pasta raiz: {folder}", 640)
             self.popular_lista_pastas()
 
     def popular_lista_pastas(self):
@@ -117,7 +130,10 @@ class AbaMultiCopiador(QWidget):
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(Qt.CheckState.Unchecked)
                 item.setData(Qt.ItemDataRole.UserRole, caminho_pasta)
+                item.setToolTip(caminho_pasta)
                 self.pastas_list_widget.addItem(item)
+
+            self.dest_count.setText(f"{len(self.subpastas_encontradas)} subpasta(s) encontrada(s)")
             
             self.checkbox_select_all.setChecked(False)
 
