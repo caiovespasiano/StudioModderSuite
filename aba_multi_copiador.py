@@ -79,6 +79,7 @@ class AbaMultiCopiador(QWidget):
 
         self.pastas_list_widget = QListWidget()
         self.pastas_list_widget.setMinimumHeight(220)
+        self.pastas_list_widget.itemChanged.connect(self._update_dest_count)
         lay_dest.addWidget(self.pastas_list_widget, 1)
 
         lay_dest.addWidget(separator())
@@ -146,6 +147,17 @@ class AbaMultiCopiador(QWidget):
             item = self.pastas_list_widget.item(i)
             if item.flags() & Qt.ItemFlag.ItemIsUserCheckable:
                 item.setCheckState(state)
+
+    def _update_dest_count(self, *args):
+        total = marked = 0
+        for i in range(self.pastas_list_widget.count()):
+            item = self.pastas_list_widget.item(i)
+            if item.flags() & Qt.ItemFlag.ItemIsUserCheckable:
+                total += 1
+                if item.checkState() == Qt.CheckState.Checked:
+                    marked += 1
+        if total:
+            self.dest_count.setText(f"{marked} de {total} marcada(s)")
 
     def on_copy_files(self):
         if not self.arquivo_fonte:

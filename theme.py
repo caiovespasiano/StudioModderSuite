@@ -18,6 +18,9 @@ QLabel#Hint { font-size: 12px; color: #8f8f8f; }
 QLineEdit#PreviewReadout { font-size: 14px; font-weight: 600; background: #202020; padding: 9px 10px; }
 QFrame#Panel { background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 12px; }
 QFrame#Separator { border: none; border-top: 1px solid #2a2a2a; }
+QPushButton#StepButton { background: transparent; border: 1px solid #2a2a2a; border-radius: 8px; padding: 7px 10px; color: #8f8f8f; font-size: 12px; font-weight: 600; }
+QPushButton#StepButton:checked { background: rgba(99,102,241,0.16); color: #a5b4fc; border-color: #6366f1; }
+QPushButton#StepButton:hover:!checked { background: #262626; color: #e9e9e9; }
 QProgressBar { border: 1px solid #2a2a2a; border-radius: 6px; background: #202020; height: 8px; text-align: center; }
 QProgressBar::chunk { background: #6366f1; border-radius: 6px; }
 QLabel { color: #d6d6d6; }

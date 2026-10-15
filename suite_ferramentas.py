@@ -194,11 +194,12 @@ class JanelaPrincipal(QMainWindow):
                 pass
         try:
             for btn in tab_widget.findChildren(QPushButton):
+                if btn.objectName():
+                    continue
                 text = (btn.text() or "").upper()
                 if any(k in text for k in self.PRIMARY_KEYWORDS):
-                    if btn.objectName() != "NavButton":
-                        btn.setObjectName("PrimaryButton")
-                        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                    btn.setObjectName("PrimaryButton")
+                    btn.setCursor(Qt.CursorShape.PointingHandCursor)
                     break
         except Exception:
             pass

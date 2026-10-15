@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView,
     QComboBox, QCheckBox, QLineEdit, QListWidget, QListWidgetItem,
-    QMessageBox, QFrame, QGridLayout
+    QMessageBox, QFrame, QGridLayout, QStackedWidget
 )
 from PySide6.QtCore import Qt
 from app_state import append_history
@@ -30,73 +30,92 @@ class AbaRenomeador(QWidget):
         self.alpha_letters = list("abcdefghijklmnopqrstuvwxyz")
         self.setup_ui()
 
+    STEP_TITLES = ["1 · Arquivos", "2 · Padrão", "3 · Revisar"]
+
     def setup_ui(self):
         from ui_helpers import step, field, hint, muted, separator
 
-        layout_principal = QHBoxLayout(self)
+        self._wizard_step = 0
+        layout_principal = QVBoxLayout(self)
         layout_principal.setContentsMargins(0, 0, 0, 0)
         layout_principal.setSpacing(12)
 
-        # --- PAINEL ESQUERDO (arquivos + prévia) ---
-        left_panel = QFrame()
-        left_panel.setObjectName("Panel")
-        coluna_esquerda = QVBoxLayout(left_panel)
-        coluna_esquerda.setContentsMargins(16, 16, 16, 16)
-        coluna_esquerda.setSpacing(8)
+        stepper = QHBoxLayout()
+        stepper.setSpacing(8)
+        self.step_buttons = []
+        for i, title in enumerate(self.STEP_TITLES):
+            b = QPushButton(title)
+            b.setObjectName("StepButton")
+            b.setCheckable(True)
+            b.clicked.connect(lambda _c=False, idx=i: self.goto_step(idx))
+            stepper.addWidget(b)
+            self.step_buttons.append(b)
+        stepper.addStretch()
+        layout_principal.addLayout(stepper)
 
-        coluna_esquerda.addWidget(step("1 · ARQUIVOS"))
+        self.step_stack = QStackedWidget()
+        layout_principal.addWidget(self.step_stack, 1)
+
+        # ---------- PASSO 1: arquivos ----------
+        page1 = QFrame()
+        page1.setObjectName("Panel")
+        l1 = QVBoxLayout(page1)
+        l1.setContentsMargins(24, 24, 24, 24)
+        l1.setSpacing(10)
+        l1.addWidget(step("ARQUIVOS A RENOMEAR"))
         btn_selecionar = QPushButton("Selecionar arquivos")
+        btn_selecionar.setMinimumHeight(40)
         btn_selecionar.clicked.connect(self.on_select_files)
-        coluna_esquerda.addWidget(btn_selecionar)
-
+        l1.addWidget(btn_selecionar)
         self.files_count = muted("Nenhum arquivo selecionado")
-        coluna_esquerda.addWidget(self.files_count)
-
+        l1.addWidget(self.files_count)
         self.tabela_arquivos = QTableWidget()
         self.tabela_arquivos.setColumnCount(2)
         self.tabela_arquivos.setHorizontalHeaderLabels(["Nome Original", "Novo Nome (Preview)"])
         self.tabela_arquivos.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tabela_arquivos.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        coluna_esquerda.addWidget(self.tabela_arquivos)
+        l1.addWidget(self.tabela_arquivos, 1)
+        l1.addWidget(hint("A prévia atualiza sozinha a cada bloco adicionado."))
+        self.step_stack.addWidget(page1)
 
-        layout_principal.addWidget(left_panel, 2)
-
-        # --- PAINEL DIREITO (montagem do nome) ---
-        right_panel = QFrame()
-        right_panel.setObjectName("Panel")
-        right_panel.setFixedWidth(400)
-        coluna_direita = QVBoxLayout(right_panel)
-        coluna_direita.setContentsMargins(16, 16, 16, 16)
-        coluna_direita.setSpacing(8)
-
-        coluna_direita.addWidget(step("2 · BLOCOS DO NOME"))
-
+        # ---------- PASSO 2: padrão ----------
+        page2 = QWidget()
+        l2 = QVBoxLayout(page2)
+        l2.setContentsMargins(0, 8, 0, 0)
+        l2.setSpacing(10)
+        seq_card = QFrame()
+        seq_card.setObjectName("Panel")
+        seq_lay = QVBoxLayout(seq_card)
+        seq_lay.setContentsMargins(24, 20, 24, 20)
+        seq_lay.setSpacing(10)
+        seq_lay.addWidget(step("SEQUÊNCIAS"))
         seq_grid = QGridLayout()
         seq_grid.setContentsMargins(0, 0, 0, 0)
-        seq_grid.setHorizontalSpacing(8)
-        seq_grid.setVerticalSpacing(8)
-        seq_grid.setColumnStretch(1, 1)
+        seq_grid.setHorizontalSpacing(12)
+        seq_grid.setVerticalSpacing(10)
+        seq_grid.setColumnStretch(0, 1)
         self.num_check = QCheckBox("Sequência numérica")
         self.num_format = QComboBox()
         self.num_format.addItems(["0", "00", "000"])
-        self.num_format.setFixedWidth(90)
+        self.num_format.setFixedWidth(120)
         self.num_add_btn = QPushButton("Adicionar")
+        self.num_add_btn.setFixedWidth(140)
         self.num_add_btn.clicked.connect(self.on_add_num_block)
         seq_grid.addWidget(self.num_check, 0, 0)
         seq_grid.addWidget(self.num_format, 0, 1)
         seq_grid.addWidget(self.num_add_btn, 0, 2)
         self.alpha_check = QCheckBox("Sequência alfabética")
         alpha_range = QHBoxLayout()
-        alpha_range.setSpacing(6)
+        alpha_range.setSpacing(8)
         self.alpha_start = QComboBox()
         self.alpha_start.addItems(self.alpha_letters)
-        self.alpha_start.setFixedWidth(56)
+        self.alpha_start.setFixedWidth(70)
         self.alpha_end = QComboBox()
         self.alpha_end.addItems(self.alpha_letters)
-        self.alpha_end.setFixedWidth(56)
+        self.alpha_end.setFixedWidth(70)
         self.alpha_format = QComboBox()
         self.alpha_format.addItems(["a", "aa", "aaa"])
-        self.alpha_format.setFixedWidth(70)
+        self.alpha_format.setFixedWidth(90)
         alpha_range.addWidget(QLabel("de"))
         alpha_range.addWidget(self.alpha_start)
         alpha_range.addWidget(QLabel("até"))
@@ -105,44 +124,136 @@ class AbaRenomeador(QWidget):
         alpha_range.addWidget(self.alpha_format)
         alpha_range.addStretch()
         self.alpha_add_btn = QPushButton("Adicionar")
+        self.alpha_add_btn.setFixedWidth(140)
         self.alpha_add_btn.clicked.connect(self.on_add_alpha_block)
         seq_grid.addWidget(self.alpha_check, 1, 0)
         seq_grid.addLayout(alpha_range, 1, 1, 1, 2)
         seq_grid.addWidget(self.alpha_add_btn, 2, 2)
-        coluna_direita.addLayout(seq_grid)
+        seq_lay.addLayout(seq_grid)
         self.num_format.setEnabled(False); self.num_add_btn.setEnabled(False); self.alpha_start.setEnabled(False); self.alpha_end.setEnabled(False); self.alpha_format.setEnabled(False); self.alpha_add_btn.setEnabled(False)
         self.num_check.toggled.connect(lambda c: (self.num_format.setEnabled(c), self.num_add_btn.setEnabled(c)))
         self.alpha_check.toggled.connect(lambda c: (self.alpha_start.setEnabled(c), self.alpha_end.setEnabled(c), self.alpha_format.setEnabled(c), self.alpha_add_btn.setEnabled(c)))
-
         prefix_row = QHBoxLayout()
         self.prefix_input = QLineEdit()
         self.prefix_input.setPlaceholderText("Prefixo ex.: skin_")
         self.prefix_input.returnPressed.connect(self.on_prefix_add)
-        self.prefix_add_btn = QPushButton("Adicionar")
+        self.prefix_add_btn = QPushButton("Adicionar prefixo")
+        self.prefix_add_btn.setFixedWidth(160)
         self.prefix_add_btn.clicked.connect(self.on_prefix_add)
         prefix_row.addWidget(self.prefix_input, 1)
         prefix_row.addWidget(self.prefix_add_btn)
-        coluna_direita.addLayout(prefix_row)
+        seq_lay.addLayout(prefix_row)
+        l2.addWidget(seq_card)
 
-        coluna_direita.addWidget(field("Blocos disponíveis"))
+        lists_card = QFrame()
+        lists_card.setObjectName("Panel")
+        lists_lay = QVBoxLayout(lists_card)
+        lists_lay.setContentsMargins(24, 20, 24, 20)
+        lists_lay.setSpacing(10)
+        lists_h = QHBoxLayout()
+        lists_h.setSpacing(12)
+        left_v = QVBoxLayout()
+        left_v.addWidget(field("Blocos disponíveis"))
         self.prefix_list = QListWidget()
+        self.prefix_list.setMinimumHeight(140)
         self.prefix_list.itemDoubleClicked.connect(self.on_prefix_double)
-        coluna_direita.addWidget(self.prefix_list)
-
-        coluna_direita.addWidget(field("Montagem do nome"))
+        left_v.addWidget(self.prefix_list)
+        lists_h.addLayout(left_v)
+        right_v = QVBoxLayout()
+        right_v.addWidget(field("Montagem do nome"))
         self.assembly = QListWidget()
+        self.assembly.setMinimumHeight(140)
         self.assembly.itemDoubleClicked.connect(self.on_assembly_double_clicked)
-        coluna_direita.addWidget(self.assembly)
-        coluna_direita.addWidget(hint("Duplo-clique move entre as listas · confira a prévia na tabela"))
+        right_v.addWidget(self.assembly)
+        lists_h.addLayout(right_v)
+        lists_lay.addLayout(lists_h)
+        lists_lay.addWidget(hint("Duplo-clique move entre as listas."))
+        l2.addWidget(lists_card, 1)
+        self.step_stack.addWidget(page2)
 
-        coluna_direita.addWidget(separator())
-        btn_renomear = QPushButton("Renomear arquivos")
-        btn_renomear.setObjectName("PrimaryButton")
-        btn_renomear.setMinimumHeight(40)
-        btn_renomear.clicked.connect(self.on_rename_files)
-        coluna_direita.addWidget(btn_renomear)
+        # ---------- PASSO 3: revisar ----------
+        page3 = QWidget()
+        p3_wrap = QHBoxLayout(page3)
+        p3_wrap.setContentsMargins(0, 8, 0, 0)
+        p3_wrap.addStretch()
+        sum_card = QFrame()
+        sum_card.setObjectName("Panel")
+        sum_card.setFixedWidth(620)
+        sum_lay = QVBoxLayout(sum_card)
+        sum_lay.setContentsMargins(24, 24, 24, 24)
+        sum_lay.setSpacing(10)
+        sum_lay.addWidget(step("RESUMO"))
+        sum_lay.addWidget(field("Arquivos"))
+        self.sum_files = muted("—")
+        sum_lay.addWidget(self.sum_files)
+        sum_lay.addWidget(field("Padrão do nome"))
+        self.sum_pattern = QLineEdit()
+        self.sum_pattern.setReadOnly(True)
+        self.sum_pattern.setObjectName("PreviewReadout")
+        sum_lay.addWidget(self.sum_pattern)
+        sum_lay.addWidget(field("Exemplo (primeiro arquivo)"))
+        self.sum_example = muted("—")
+        sum_lay.addWidget(self.sum_example)
+        sum_lay.addWidget(hint("Arquivos que já existirem com o nome novo serão pulados e listados no final."))
+        sum_lay.addWidget(separator())
+        self.btn_rename = QPushButton("Renomear arquivos")
+        self.btn_rename.setObjectName("PrimaryButton")
+        self.btn_rename.setMinimumHeight(46)
+        self.btn_rename.clicked.connect(self.on_rename_files)
+        sum_lay.addWidget(self.btn_rename)
+        p3_wrap.addWidget(sum_card)
+        p3_wrap.addStretch()
+        self.step_stack.addWidget(page3)
 
-        layout_principal.addWidget(right_panel)
+        # ---------- rodapé ----------
+        footer = QHBoxLayout()
+        self.btn_back = QPushButton("Voltar")
+        self.btn_back.setFixedWidth(140)
+        self.btn_back.clicked.connect(self._on_back)
+        footer.addWidget(self.btn_back)
+        footer.addStretch()
+        self.btn_next = QPushButton("Continuar")
+        self.btn_next.setObjectName("PrimaryButton")
+        self.btn_next.setFixedWidth(200)
+        self.btn_next.setMinimumHeight(40)
+        self.btn_next.clicked.connect(self._on_next)
+        footer.addWidget(self.btn_next)
+        layout_principal.addLayout(footer)
+
+        self.goto_step(0)
+
+    def _on_next(self):
+        self.goto_step(self._wizard_step + 1)
+
+    def _on_back(self):
+        self.goto_step(self._wizard_step - 1)
+
+    def goto_step(self, index):
+        index = max(0, min(2, index))
+        if index >= 1 and not self.arquivos_selecionados:
+            QMessageBox.warning(self, "Sem arquivos", "Volte ao passo 1 e selecione os arquivos.")
+            return False
+        if index == 2 and not any(b.type_ in ('num', 'alpha') for b in self.name_blocks):
+            QMessageBox.warning(self, "Sem sequência", "Volte ao passo 2 e monte o nome com ao menos um bloco de sequência.")
+            return False
+        self._wizard_step = index
+        self.step_stack.setCurrentIndex(index)
+        for i, b in enumerate(self.step_buttons):
+            b.setChecked(i == index)
+        self.btn_back.setVisible(index > 0)
+        self.btn_next.setVisible(index < 2)
+        if index == 2:
+            self._refresh_summary()
+        return True
+
+    def _refresh_summary(self):
+        n = len(self.arquivos_selecionados)
+        self.sum_files.setText(f"{n} arquivo(s) selecionado(s)")
+        pattern = self._generate_string_from_blocks(self.name_blocks, 0)
+        ext = os.path.splitext(self.arquivos_selecionados[0])[1] if self.arquivos_selecionados else ""
+        self.sum_pattern.setText(f"{pattern}{ext}")
+        first = os.path.basename(self.arquivos_selecionados[0]) if self.arquivos_selecionados else "—"
+        self.sum_example.setText(f"{first}  ->  {pattern}{ext}")
 
     # ... (o resto do código do aba_renomeador.py permanece o mesmo) ...
     def on_select_files(self):
@@ -255,6 +366,7 @@ class AbaRenomeador(QWidget):
         self.name_blocks = []
         self.prefix_store = []
         self.refresh_all_views()
+        self.goto_step(0)
     
     def _alpha_repr(self, b, index):
         fmt_len, start_idx, end_idx = len(b.config.get("format", "a")), b.config.get("start_index", 0), b.config.get("end_index", len(self.alpha_letters) - 1); base = (end_idx - start_idx) + 1
