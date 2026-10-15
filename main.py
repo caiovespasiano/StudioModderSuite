@@ -1,124 +1,140 @@
-# main.py (Este é o Launcher)
+# main.py — Launcher / seletor de ferramentas
 import sys
-import os
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QMessageBox, QLabel, QFrame, QHBoxLayout
+
+from PySide6.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QMessageBox, QLabel, QSizePolicy,
+)
 from PySide6.QtCore import Qt, QUrl, QSize
 from PySide6.QtGui import QIcon, QPixmap, QDesktopServices
 
 from theme import apply_theme
+from paths import resource_path
 
 GITHUB_URL = "https://github.com/caiovespasiano/StudioModderSuite"
 
 
 def make_github_button(parent=None):
+    """Botão-ícone que abre o repositório."""
     btn = QPushButton(parent)
     btn.setObjectName("IconButton")
     btn.setIcon(QIcon(resource_path("github_mark.svg")))
-    btn.setIconSize(QSize(22, 22))
-    btn.setFixedSize(38, 38)
+    btn.setIconSize(QSize(20, 20))
+    btn.setFixedSize(36, 36)
     btn.setToolTip("Abrir repositório no GitHub")
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
     btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(GITHUB_URL)))
     return btn
 
-# ####################################################
-# ##       FUNÇÃO CRÍTICA PARA A COMPILAÇÃO (.EXE)  ##
-# ####################################################
-def resource_path(relative_path):
-    """ Retorna o caminho absoluto para o recurso, funcionando em dev e no PyInstaller """
-    try:
-        # PyInstaller cria uma pasta temp e armazena o caminho em _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        # Se não estiver "congelado", pega o caminho do script
-        base_path = os.path.abspath(".")
-
-    return os.path.join(base_path, relative_path)
-
 
 class Launcher(QWidget):
+    """Tela inicial: um bloco centralizado, com rodapé compacto."""
+
+    CONTENT_WIDTH = 460
+
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Studio Modder - Seletor de Ferramentas")
-        self.resize(520, 620)
+        self.setWindowTitle("Studio Modder")
         self.setObjectName("AppRoot")
-
-        # Usa a função resource_path para garantir que o ícone carregue no .exe
         self.setWindowIcon(QIcon(resource_path("meu_icone.ico")))
 
         self.janela_ferramentas = None
-        self.janela_editor_sii = None
 
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(72, 48, 72, 32)
-        outer.setSpacing(10)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
-        # A janela É a superfície — sem card interno redundante.
-        # Logo com respiro: a arte encosta nas bordas do PNG, então o
-        # pixmap é menor que o label para não parecer cortada.
-        try:
-            pixmap = QPixmap(resource_path("logo_dimitrius.png"))
-            if pixmap.isNull():
-                pixmap = QPixmap(resource_path("meu_icone.ico"))
-            if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(72, 72, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                logo_label = QLabel()
-                logo_label.setPixmap(scaled_pixmap)
-                logo_label.setFixedSize(88, 88)
-                logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                outer.addWidget(logo_label, alignment=Qt.AlignmentFlag.AlignHCenter)
-        except Exception as e:
-            print(f"Erro ao carregar a imagem: {e}")
+        center = QVBoxLayout()
+        center.setContentsMargins(32, 32, 32, 24)
+        center.setSpacing(0)
+        # O bloco fica centralizado nos dois eixos; a janela nasce do tamanho
+        # do conteúdo, então não sobra vão morto embaixo do GitHub.
+        center.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        column = QWidget()
+        column.setFixedWidth(self.CONTENT_WIDTH)
+        col = QVBoxLayout(column)
+        col.setContentsMargins(0, 0, 0, 0)
+        col.setSpacing(10)
+
+        logo_label = QLabel()
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logo_label.setFixedHeight(84)
+        pixmap = QPixmap(resource_path("logo_dimitrius.png"))
+        if pixmap.isNull():
+            pixmap = QPixmap(resource_path("meu_icone.ico"))
+        if not pixmap.isNull():
+            # A arte encosta nas bordas do PNG: desenho menor que a área,
+            # centralizada, para não parecer cortada.
+            logo_label.setPixmap(
+                pixmap.scaled(72, 72, Qt.AspectRatioMode.KeepAspectRatio,
+                              Qt.TransformationMode.SmoothTransformation)
+            )
+        col.addWidget(logo_label)
 
         title = QLabel("Studio Modder")
         title.setObjectName("LoginTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        outer.addWidget(title)
+        col.addWidget(title)
 
         subtitle = QLabel("Selecione a suíte para começar")
         subtitle.setObjectName("LoginSub")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        outer.addWidget(subtitle)
+        col.addWidget(subtitle)
 
-        outer.addSpacing(14)
+        col.addSpacing(18)
 
-        btn_ferramentas_arquivo = QPushButton("Abrir Ferramentas de Arquivo")
-        btn_ferramentas_arquivo.setObjectName("PrimaryButton")
-        btn_ferramentas_arquivo.setMinimumHeight(48)
-        btn_ferramentas_arquivo.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_ferramentas_arquivo.clicked.connect(self.abrir_suite_ferramentas)
+        btn_ferramentas = QPushButton("Abrir Ferramentas de Arquivo")
+        btn_ferramentas.setObjectName("PrimaryButton")
+        btn_ferramentas.setMinimumHeight(46)
+        btn_ferramentas.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_ferramentas.clicked.connect(self.abrir_suite_ferramentas)
+        col.addWidget(btn_ferramentas)
 
-        # Botão para o nosso próximo projeto!
-        btn_editor_sii = QPushButton("Editor de Defs (.sii / .sui) — em breve")
-        btn_editor_sii.setMinimumHeight(48)
-        btn_editor_sii.setEnabled(False)
+        btn_editor = QPushButton("Editor de Defs (.sii / .sui) — em breve")
+        btn_editor.setMinimumHeight(46)
+        btn_editor.setEnabled(False)
+        col.addWidget(btn_editor)
 
-        outer.addWidget(btn_ferramentas_arquivo)
-        outer.addWidget(btn_editor_sii)
+        col.addSpacing(6)
 
         hint = QLabel("Copiador, renomeador e otimizadores DDS/TGA em um só lugar.")
-        hint.setObjectName("Muted")
+        hint.setObjectName("Hint")
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hint.setWordWrap(True)
-        outer.addWidget(hint)
+        col.addWidget(hint)
 
-        outer.addStretch()
+        col.addSpacing(14)
 
-        outer.addStretch()
-        outer.addWidget(make_github_button(self), alignment=Qt.AlignmentFlag.AlignHCenter)
+        # Rodapé: créditos à esquerda, ícone do GitHub à direita (linha única).
+        footer = QHBoxLayout()
+        footer.setSpacing(10)
+        credits = QLabel("Studio Modder Suite v1.0")
+        credits.setObjectName("Muted")
+        credits.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        footer.addWidget(credits, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        footer.addWidget(make_github_button(self), 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        col.addLayout(footer)
 
+        center.addWidget(column)
+        root.addLayout(center)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.adjustSize()
 
     def abrir_suite_ferramentas(self):
         if not self.janela_ferramentas:
             try:
-                from suite_ferramentas import JanelaPrincipal as JanelaFerramentas
-                self.janela_ferramentas = JanelaFerramentas()
+                from suite_ferramentas import JanelaPrincipal
+
+                self.janela_ferramentas = JanelaPrincipal()
             except Exception as e:
                 QMessageBox.critical(
                     self,
                     "Erro Crítico",
                     "Não foi possível abrir a suíte de ferramentas.\n\n"
-                    f"Detalhes: {e}"
+                    f"Detalhes: {e}",
                 )
                 return
 
