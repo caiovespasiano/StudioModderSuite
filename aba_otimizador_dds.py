@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QComboBox, QLineEdit, QListWidget, QListWidgetItem,
     QMessageBox, QFrame, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView, QInputDialog,
-    QProgressBar
+    QProgressBar, QSizePolicy
 )
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QEvent
 from PySide6.QtGui import QColor, QBrush, QPalette
@@ -165,7 +165,9 @@ class AbaOtimizadorDDS(QWidget):
         # --- PAINEL ESQUERDO (fonte + opções + ação) ---
         panel = QFrame()
         panel.setObjectName("Panel")
-        panel.setFixedWidth(380)
+        panel.setMinimumWidth(330)
+        panel.setMaximumWidth(400)
+        panel.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         coluna_esquerda = QVBoxLayout(panel)
         coluna_esquerda.setContentsMargins(16, 16, 16, 16)
         coluna_esquerda.setSpacing(8)

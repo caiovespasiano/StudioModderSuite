@@ -23,13 +23,12 @@ class AbaMultiCopiador(QWidget):
 
         layout_principal = QVBoxLayout(self)
         layout_principal.setContentsMargins(0, 0, 0, 0)
-        layout_principal.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
+        layout_principal.setSpacing(12)
 
-        content = QVBoxLayout()
-        content.setSpacing(12)
+        # Ocupa a largura disponível (até um limite confortável de leitura).
         fixed = QWidget()
-        fixed.setFixedWidth(700)
-        fixed.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Maximum)
+        fixed.setMaximumWidth(860)
+        fixed.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         fixed_layout = QVBoxLayout(fixed)
         fixed_layout.setContentsMargins(0, 0, 0, 0)
         fixed_layout.setSpacing(12)
@@ -99,8 +98,8 @@ class AbaMultiCopiador(QWidget):
         lay_dest.addWidget(btn_copiar)
         fixed_layout.addWidget(card_dest, 1)
 
-        content.addWidget(fixed)
-        layout_principal.addLayout(content)
+        content = fixed
+        layout_principal.addWidget(fixed, 1)
 
     def on_select_source_file(self):
         filepath, _ = QFileDialog.getOpenFileName(self, "Selecionar Arquivo Fonte")

@@ -6,7 +6,7 @@ import traceback
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QComboBox, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
-    QMessageBox, QFrame, QInputDialog, QProgressBar
+    QMessageBox, QFrame, QInputDialog, QProgressBar, QSizePolicy
 )
 from PySide6.QtCore import Qt, QThread, Signal, Slot
 from PySide6.QtGui import QColor, QPalette
@@ -121,7 +121,9 @@ class AbaOtimizadorTGA(QWidget):
         # --- PAINEL ESQUERDO (fonte + opções + ação) ---
         panel = QFrame()
         panel.setObjectName("Panel")
-        panel.setFixedWidth(380)
+        panel.setMinimumWidth(330)
+        panel.setMaximumWidth(400)
+        panel.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         coluna_esquerda = QVBoxLayout(panel)
         coluna_esquerda.setContentsMargins(16, 16, 16, 16)
         coluna_esquerda.setSpacing(8)
