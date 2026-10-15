@@ -2,10 +2,24 @@
 import sys
 import os
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QMessageBox, QLabel, QFrame, QHBoxLayout
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtCore import Qt, QUrl, QSize
+from PySide6.QtGui import QIcon, QPixmap, QDesktopServices
 
 from theme import apply_theme
+
+GITHUB_URL = "https://github.com/caiovespasiano/StudioModderSuite"
+
+
+def make_github_button(parent=None):
+    btn = QPushButton(parent)
+    btn.setObjectName("IconButton")
+    btn.setIcon(QIcon(resource_path("github_mark.svg")))
+    btn.setIconSize(QSize(22, 22))
+    btn.setFixedSize(38, 38)
+    btn.setToolTip("Abrir repositório no GitHub")
+    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(GITHUB_URL)))
+    return btn
 
 # ####################################################
 # ##       FUNÇÃO CRÍTICA PARA A COMPILAÇÃO (.EXE)  ##
@@ -43,7 +57,7 @@ class Launcher(QWidget):
         # Logo com respiro: a arte encosta nas bordas do PNG, então o
         # pixmap é menor que o label para não parecer cortada.
         try:
-            pixmap = QPixmap(resource_path("github_mark.svg"))
+            pixmap = QPixmap(resource_path("logo_dimitrius.png"))
             if pixmap.isNull():
                 pixmap = QPixmap(resource_path("meu_icone.ico"))
             if not pixmap.isNull():
@@ -90,11 +104,8 @@ class Launcher(QWidget):
 
         outer.addStretch()
 
-        credits_label = QLabel('<a href="https://github.com/caiovespasiano/StudioModderSuite" style="color:#a5b4fc;">github.com/caiovespasiano/StudioModderSuite</a>')
-        credits_label.setObjectName("Link")
-        credits_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        credits_label.setOpenExternalLinks(True)
-        outer.addWidget(credits_label)
+        outer.addStretch()
+        outer.addWidget(make_github_button(self), alignment=Qt.AlignmentFlag.AlignHCenter)
 
 
     def abrir_suite_ferramentas(self):

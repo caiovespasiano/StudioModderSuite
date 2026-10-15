@@ -6,10 +6,24 @@ from PySide6.QtWidgets import (
     QTextEdit, QHBoxLayout, QMessageBox, QStackedWidget, QLabel, QFrame,
     QButtonGroup,
 )
-from PySide6.QtGui import QIcon, QPixmap
-from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon, QPixmap, QDesktopServices
+from PySide6.QtCore import Qt, QUrl, QSize
 
 from theme import apply_theme
+
+GITHUB_URL = "https://github.com/caiovespasiano/StudioModderSuite"
+
+
+def make_github_button(parent=None):
+    btn = QPushButton(parent)
+    btn.setObjectName("IconButton")
+    btn.setIcon(QIcon("github_mark.svg"))
+    btn.setIconSize(QSize(22, 22))
+    btn.setFixedSize(38, 38)
+    btn.setToolTip("Abrir repositório no GitHub")
+    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(GITHUB_URL)))
+    return btn
 
 from aba_copiadora import AbaCopiadora
 from aba_renomeador import AbaRenomeador
@@ -62,7 +76,7 @@ class JanelaPrincipal(QMainWindow):
         brand_row = QHBoxLayout()
         brand_row.setSpacing(10)
         logo_label = QLabel()
-        pix = QPixmap("github_mark.svg")
+        pix = QPixmap("logo_dimitrius.png")
         if pix.isNull():
             pix = QPixmap("meu_icone.ico")
         if not pix.isNull():
@@ -108,11 +122,7 @@ class JanelaPrincipal(QMainWindow):
             self.nav_buttons.append(btn)
 
         side_layout.addStretch()
-        credits = QLabel('<a href="https://github.com/caiovespasiano/StudioModderSuite" style="color:#a5b4fc;">github.com/caiovespasiano/StudioModderSuite</a>')
-        credits.setObjectName("Link")
-        credits.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        credits.setOpenExternalLinks(True)
-        side_layout.addWidget(credits)
+        side_layout.addWidget(make_github_button(self), alignment=Qt.AlignmentFlag.AlignHCenter)
 
         root_layout.addWidget(sidebar)
 
