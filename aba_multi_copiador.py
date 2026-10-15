@@ -25,9 +25,9 @@ class AbaMultiCopiador(QWidget):
         layout_principal.setContentsMargins(0, 0, 0, 0)
         layout_principal.setSpacing(12)
 
-        # Ocupa a largura disponível (até um limite confortável de leitura).
+        # Ocupa toda a largura disponível: teto de largura deixava uma
+        # faixa vazia à direita e, sem centralizar, ainda desalinhava tudo.
         fixed = QWidget()
-        fixed.setMaximumWidth(860)
         fixed.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         fixed_layout = QVBoxLayout(fixed)
         fixed_layout.setContentsMargins(0, 0, 0, 0)
