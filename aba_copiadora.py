@@ -118,28 +118,44 @@ class AbaCopiadora(QWidget):
         l1.setContentsMargins(24, 24, 24, 24)
         l1.setSpacing(10)
         l1.addWidget(step("DE ONDE VÊM AS CÓPIAS"))
-        l1.addWidget(field("Arquivo molde"))
+
+        # Padrão usado nas abas: rótulo + valor à esquerda, ação à direita.
+        def _field_row(label_text, value_label, button_text, handler):
+            row = QHBoxLayout()
+            row.setSpacing(12)
+            col = QVBoxLayout()
+            col.setSpacing(2)
+            col.addWidget(field(label_text))
+            col.addWidget(value_label)
+            row.addLayout(col)
+            row.addStretch()
+            btn = QPushButton(button_text)
+            btn.setMinimumHeight(40)
+            btn.setMinimumWidth(220)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(handler)
+            row.addWidget(btn, 0, Qt.AlignmentFlag.AlignVCenter)
+            return row
+
         self.file_label = muted("Nenhum arquivo selecionado")
-        l1.addWidget(self.file_label)
-        self.file_btn = QPushButton("Selecionar arquivo base")
-        self.file_btn.setMinimumHeight(40)
-        self.file_btn.clicked.connect(self.on_select_file)
-        l1.addWidget(self.file_btn)
-        l1.addWidget(field("Pasta de exportação"))
+        l1.addLayout(_field_row("Arquivo molde", self.file_label, "Selecionar arquivo base", self.on_select_file))
         self.folder_label = muted("Nenhuma pasta selecionada")
-        l1.addWidget(self.folder_label)
-        self.folder_btn = QPushButton("Selecionar pasta de exportação")
-        self.folder_btn.setMinimumHeight(40)
-        self.folder_btn.clicked.connect(self.on_select_folder)
-        l1.addWidget(self.folder_btn)
+        l1.addLayout(_field_row("Pasta de exportação", self.folder_label, "Selecionar pasta de exportação", self.on_select_folder))
+
         qty_row = QHBoxLayout()
-        qty_row.addWidget(field("Quantidade de arquivos"))
-        qty_row.addStretch()
+        qty_row.setSpacing(12)
+        qty_col = QVBoxLayout()
+        qty_col.setSpacing(2)
+        qty_col.addWidget(field("Quantidade de arquivos"))
         self.qty_spin = QSpinBox()
         self.qty_spin.setRange(1, 9999)
-        self.qty_spin.setFixedWidth(120)
-        qty_row.addWidget(self.qty_spin)
+        self.qty_spin.setFixedWidth(140)
+        self.qty_spin.setMinimumHeight(40)
+        qty_col.addWidget(self.qty_spin)
+        qty_row.addLayout(qty_col)
+        qty_row.addStretch()
         l1.addLayout(qty_row)
+        l1.addSpacing(6)
         l1.addWidget(hint("O arquivo base conta como 1 — para gerar 35 arquivos novos, peça 36."))
         self.step_stack.addWidget(page1)
 
@@ -381,13 +397,20 @@ class AbaCopiadora(QWidget):
     
     def on_select_file(self, file=None):
         if not file: file, _ = QFileDialog.getOpenFileName(self, "Selecione um arquivo")
-        if file: setattr(self, 'selected_file', file); self.file_label.setText(f"{os.path.basename(file)}"); self.file_label.setToolTip(file); self.load_selected_file() if self.internal_check.isChecked() else None; self.update_preview()
+        if file:
+            from ui_helpers import set_elided
+            setattr(self, 'selected_file', file)
+            set_elided(self.file_label, os.path.basename(file))
+            self.file_label.setToolTip(file)
+            self.load_selected_file() if self.internal_check.isChecked() else None
+            self.update_preview()
 
     def on_select_folder(self, folder=None):
         if not folder: folder = QFileDialog.getExistingDirectory(self, "Selecione pasta de exportação")
         if folder:
-            from ui_helpers import elide_label
-            setattr(self, 'selected_folder', folder); elide_label(self.folder_label, folder, 380)
+            from ui_helpers import set_elided
+            setattr(self, 'selected_folder', folder)
+            set_elided(self.folder_label, folder)
     
     def on_prefix_add(self):
         txt = self.prefix_input.text().strip()

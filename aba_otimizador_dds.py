@@ -216,6 +216,10 @@ class AbaOtimizadorDDS(QWidget):
         self.check_protect_alpha.setChecked(True)
         coluna_esquerda.addWidget(self.check_protect_alpha)
 
+        # Empurra o resto para baixo: o painel de opções é curto e ficava
+        # com um vão enorme no meio da coluna.
+        coluna_esquerda.addStretch(1)
+
         coluna_esquerda.addWidget(separator())
         coluna_esquerda.addWidget(step("4 · PRESET"))
         self.combo_presets = QComboBox()
@@ -251,7 +255,6 @@ class AbaOtimizadorDDS(QWidget):
         self.progress_bar.setMaximum(0)
         self.progress_bar.setVisible(False)
         coluna_esquerda.addWidget(self.progress_bar)
-        coluna_esquerda.addStretch(1)
         layout_principal.addWidget(panel, 0)
 
         # --- PAINEL DIREITO (resultados) ---
@@ -299,10 +302,13 @@ class AbaOtimizadorDDS(QWidget):
 
     def check_for_local_texconv(self):
         from ui_helpers import elide_label
-        local_path = os.path.join("tools", "texconv", "texconv.exe")
-        if os.path.exists(local_path):
-            full_path = os.path.abspath(local_path); self.texconv_path = full_path; elide_label(self.texconv_label, f"Encontrado: {full_path}", 330)
-        else: self.texconv_label.setText("texconv.exe não encontrado na pasta 'tools'")
+        from paths import find_texconv
+        full_path = find_texconv()
+        if full_path:
+            self.texconv_path = full_path
+            elide_label(self.texconv_label, f"Encontrado: {full_path}", 330)
+        else:
+            self.texconv_label.setText("texconv.exe não encontrado — use 'Localizar'")
 
     def _style_texture_table(self):
         """Coluna 'Arquivo' esticada, demais de largura fixa, sem cortar nomes."""
@@ -318,6 +324,12 @@ class AbaOtimizadorDDS(QWidget):
             widths = {0: 34, 2: 104, 3: 92, 4: 108}
         for col, w in widths.items():
             t.setColumnWidth(col, w)
+        # Cabeçalho alinhado ao conteúdo (à esquerda), não centralizado solto.
+        for col in range(1, t.columnCount()):
+            item = t.horizontalHeaderItem(col)
+            if item is not None:
+                item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        t.verticalHeader().setDefaultSectionSize(32)
 
     def on_select_mod_folder(self):
         from ui_helpers import elide_label

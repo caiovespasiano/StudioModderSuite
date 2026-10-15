@@ -10,6 +10,7 @@ from PySide6.QtGui import QIcon, QPixmap, QDesktopServices
 from PySide6.QtCore import Qt, QUrl, QSize
 
 from theme import apply_theme
+from paths import resource_path
 
 GITHUB_URL = "https://github.com/caiovespasiano/StudioModderSuite"
 
@@ -17,7 +18,7 @@ GITHUB_URL = "https://github.com/caiovespasiano/StudioModderSuite"
 def make_github_button(parent=None):
     btn = QPushButton(parent)
     btn.setObjectName("IconButton")
-    btn.setIcon(QIcon("github_mark.svg"))
+    btn.setIcon(QIcon(resource_path("github_mark.svg")))
     btn.setIconSize(QSize(22, 22))
     btn.setFixedSize(38, 38)
     btn.setToolTip("Abrir repositório no GitHub")
@@ -56,7 +57,7 @@ class JanelaPrincipal(QMainWindow):
         self.resize(1280, 800)
         self.setMinimumSize(1100, 700)
 
-        self.setWindowIcon(QIcon("meu_icone.ico"))
+        self.setWindowIcon(QIcon(resource_path("meu_icone.ico")))
 
         root = QWidget()
         root.setObjectName("AppRoot")
@@ -76,9 +77,9 @@ class JanelaPrincipal(QMainWindow):
         brand_row = QHBoxLayout()
         brand_row.setSpacing(10)
         logo_label = QLabel()
-        pix = QPixmap("logo_dimitrius.png")
+        pix = QPixmap(resource_path("logo_dimitrius.png"))
         if pix.isNull():
-            pix = QPixmap("meu_icone.ico")
+            pix = QPixmap(resource_path("meu_icone.ico"))
         if not pix.isNull():
             logo_label.setPixmap(
                 pix.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)

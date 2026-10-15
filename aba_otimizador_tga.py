@@ -158,6 +158,10 @@ class AbaOtimizadorTGA(QWidget):
         self.check_rle.setChecked(True)
         coluna_esquerda.addWidget(self.check_rle)
 
+        # Empurra o resto para baixo: o painel de opções é curto e ficava
+        # com um vão enorme no meio da coluna.
+        coluna_esquerda.addStretch(1)
+
         coluna_esquerda.addWidget(separator())
         coluna_esquerda.addWidget(step("3 · PRESET"))
         self.combo_presets = QComboBox()
@@ -193,7 +197,6 @@ class AbaOtimizadorTGA(QWidget):
         self.progress_bar.setMaximum(0)
         self.progress_bar.setVisible(False)
         coluna_esquerda.addWidget(self.progress_bar)
-        coluna_esquerda.addStretch(1)
         layout_principal.addWidget(panel, 0)
 
         # --- PAINEL DIREITO (resultados) ---
@@ -247,6 +250,11 @@ class AbaOtimizadorTGA(QWidget):
         t.setSortingEnabled(True)
         for col, w in {0: 34, 2: 104, 3: 92, 4: 108}.items():
             t.setColumnWidth(col, w)
+        for col in range(1, t.columnCount()):
+            item = t.horizontalHeaderItem(col)
+            if item is not None:
+                item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        t.verticalHeader().setDefaultSectionSize(32)
 
     def on_select_mod_folder(self):
         from ui_helpers import elide_label

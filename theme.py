@@ -89,7 +89,8 @@ QTableWidget::item:selected { background: rgba(99,102,241,0.28); color: #ffffff;
 QHeaderView { height: 34px; }
 QHeaderView::section {
     background: #1e1e1e; color: #8f8f8f; border: none;
-    border-bottom: 1px solid #2a2a2a; padding: 7px 10px; font-size: 11px; font-weight: 600;
+    border-bottom: 1px solid #2a2a2a; border-right: 1px solid #202020;
+    padding: 0 12px; font-size: 11px; font-weight: 600;
 }
 QTableCornerButton::section { background: #1e1e1e; border: none; }
 QCheckBox { font-size: 13px; color: #d6d6d6; spacing: 8px; }

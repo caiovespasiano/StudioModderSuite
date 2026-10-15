@@ -37,11 +37,13 @@ def muted(text=""):
     """Texto de estado (ex.: 'Nenhum arquivo selecionado').
 
     Sem wordWrap de propósito: quebra de linha inflava a altura da linha e
-    abria buracos verticais no layout. Caminhos longos usam elide_label().
+    abria buracos verticais. Expande na horizontal e elide (nunca corta).
+    Caminhos longos devem passar por elide_label().
     """
     w = QLabel(text)
     w.setObjectName("FieldValue")
-    w.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+    w.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+    w.setMinimumWidth(0)
     return w
 
 
@@ -57,5 +59,13 @@ def elide_label(label, text, width=360):
     """Mostra o texto elidido (caminho longo) e guarda o valor real no tooltip."""
     metrics = label.fontMetrics()
     label.setText(metrics.elidedText(text, Qt.TextElideMode.ElideMiddle, max(120, width)))
+    label.setToolTip(text)
+    label.setWordWrap(False)
+
+
+def set_elided(label, text):
+    """Elide conforme a largura REAL do label (usado em texts que mudam)."""
+    metrics = label.fontMetrics()
+    label.setText(metrics.elidedText(text, Qt.TextElideMode.ElideMiddle, max(80, label.width())))
     label.setToolTip(text)
     label.setWordWrap(False)

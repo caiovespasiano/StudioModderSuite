@@ -1,22 +1,35 @@
 import json
 import os
-import sys
+import tempfile
 from datetime import datetime
+
+from paths import app_dir
 
 STATE_FILE = "studio_modder_state.json"
 MAX_HISTORY_ITEMS = 500
 
 
-def _base_dir():
-    # Quando congelado (PyInstaller), usa a pasta do executável (gravável).
-    # Em dev, usa a pasta deste arquivo, não o CWD (estável contra onde o app é lançado).
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(os.path.abspath(sys.executable))
-    return os.path.dirname(os.path.abspath(__file__))
-
-
 def _state_path():
-    return os.path.join(_base_dir(), STATE_FILE)
+    """Pasta gravável do estado.
+
+    Prefere a pasta do app; se não puder gravar (ex.: instalado em
+    C:\\Program Files), cai para %LOCALAPPDATA%\\StudioModderSuite para nunca
+    quebrar o app com erro de caminho/permissão.
+    """
+    base = app_dir()
+    try:
+        probe = os.path.join(base, ".write_test")
+        with open(probe, "w", encoding="utf-8") as f:
+            f.write("")
+        os.remove(probe)
+        return os.path.join(base, STATE_FILE)
+    except OSError:
+        fallback = os.path.join(tempfile.gettempdir(), "StudioModderSuite")
+        try:
+            os.makedirs(fallback, exist_ok=True)
+        except OSError:
+            fallback = tempfile.gettempdir()
+        return os.path.join(fallback, STATE_FILE)
 
 
 def _default_state():
@@ -44,8 +57,12 @@ def load_state():
 
 def save_state(state):
     path = _state_path()
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, indent=2)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+    except OSError:
+        # Estado é acessório: nunca derruba a ferramenta se não gravar.
+        pass
 
 
 def get_presets(tool_key):

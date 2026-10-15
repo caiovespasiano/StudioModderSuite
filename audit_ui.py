@@ -3,7 +3,8 @@ import os
 import sys
 
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QPushButton, QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox
+    QApplication, QWidget, QPushButton, QLabel, QComboBox, QSpinBox, QLineEdit, QCheckBox,
+    QMessageBox
 )
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QFont, QFontDatabase
@@ -12,6 +13,13 @@ OUT = os.path.join(os.environ.get("TEMP", "."), "opencode", "audit")
 os.makedirs(OUT, exist_ok=True)
 
 app = QApplication(sys.argv)
+
+# Auditoria não é interativa: neutraliza diálogos modais.
+QMessageBox.warning = lambda *a, **k: QMessageBox.StandardButton.No
+QMessageBox.critical = lambda *a, **k: QMessageBox.StandardButton.No
+QMessageBox.information = lambda *a, **k: QMessageBox.StandardButton.Yes
+QMessageBox.question = lambda *a, **k: QMessageBox.StandardButton.Yes
+
 from theme import apply_theme, APP_QSS
 apply_theme(app)
 
