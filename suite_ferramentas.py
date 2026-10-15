@@ -65,9 +65,10 @@ class JanelaPrincipal(QMainWindow):
         pix = QPixmap("logo_dimitrius.png")
         if not pix.isNull():
             logo_label.setPixmap(
-                pix.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                pix.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             )
         logo_label.setFixedSize(32, 32)
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         brand_row.addWidget(logo_label)
         brand_text = QVBoxLayout()
         brand_text.setSpacing(0)

@@ -36,43 +36,36 @@ class Launcher(QWidget):
         self.janela_editor_sii = None
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(40, 40, 40, 32)
-        outer.setSpacing(0)
+        outer.setContentsMargins(72, 48, 72, 32)
+        outer.setSpacing(10)
 
-        card = QFrame()
-        card.setObjectName("LoginCard")
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(36, 34, 36, 28)
-        card_layout.setSpacing(12)
-        card_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # IMAGEM
+        # A janela É a superfície — sem card interno redundante.
+        # Logo com respiro: a arte encosta nas bordas do PNG, então o
+        # pixmap é menor que o label para não parecer cortada.
         try:
             pixmap = QPixmap(resource_path("logo_dimitrius.png"))
             if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                scaled_pixmap = pixmap.scaled(72, 72, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 logo_label = QLabel()
                 logo_label.setPixmap(scaled_pixmap)
+                logo_label.setFixedSize(88, 88)
                 logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                card_layout.addWidget(logo_label)
+                outer.addWidget(logo_label, alignment=Qt.AlignmentFlag.AlignHCenter)
         except Exception as e:
             print(f"Erro ao carregar a imagem: {e}")
 
         title = QLabel("Studio Modder")
         title.setObjectName("LoginTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        card_layout.addWidget(title)
+        outer.addWidget(title)
 
         subtitle = QLabel("Selecione a suíte para começar")
         subtitle.setObjectName("LoginSub")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        card_layout.addWidget(subtitle)
+        outer.addWidget(subtitle)
 
-        card_layout.addSpacing(8)
+        outer.addSpacing(14)
 
-        # ####################################################
-        # ##               TEXTO DO BOTÃO ATUALIZADO        ##
-        # ####################################################
         btn_ferramentas_arquivo = QPushButton("Abrir Ferramentas de Arquivo")
         btn_ferramentas_arquivo.setObjectName("PrimaryButton")
         btn_ferramentas_arquivo.setMinimumHeight(48)
@@ -84,17 +77,16 @@ class Launcher(QWidget):
         btn_editor_sii.setMinimumHeight(48)
         btn_editor_sii.setEnabled(False)
 
-        card_layout.addWidget(btn_ferramentas_arquivo)
-        card_layout.addWidget(btn_editor_sii)
+        outer.addWidget(btn_ferramentas_arquivo)
+        outer.addWidget(btn_editor_sii)
 
         hint = QLabel("Copiador, renomeador e otimizadores DDS/TGA em um só lugar.")
         hint.setObjectName("Muted")
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hint.setWordWrap(True)
-        card_layout.addWidget(hint)
+        outer.addWidget(hint)
 
-        outer.addWidget(card)
-        outer.addSpacing(16)
+        outer.addStretch()
 
         credits_label = QLabel("Desenvolvido por: Dimitrius Caio Vespasiano")
         credits_label.setObjectName("Muted")
