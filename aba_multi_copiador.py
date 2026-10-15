@@ -37,12 +37,13 @@ class AbaMultiCopiador(QWidget):
         card_file = QFrame()
         card_file.setObjectName("Panel")
         lay_file = QVBoxLayout(card_file)
-        lay_file.setContentsMargins(16, 16, 16, 16)
+        lay_file.setContentsMargins(18, 16, 18, 16)
         lay_file.setSpacing(8)
         lay_file.addWidget(step("1 · ARQUIVO FONTE"))
         self.arquivo_fonte_label = muted("Nenhum arquivo selecionado")
         lay_file.addWidget(self.arquivo_fonte_label)
         btn_select_file = QPushButton("Selecionar arquivo para copiar")
+        btn_select_file.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_select_file.clicked.connect(self.on_select_source_file)
         lay_file.addWidget(btn_select_file)
         fixed_layout.addWidget(card_file)
@@ -51,12 +52,13 @@ class AbaMultiCopiador(QWidget):
         card_root = QFrame()
         card_root.setObjectName("Panel")
         lay_root = QVBoxLayout(card_root)
-        lay_root.setContentsMargins(16, 16, 16, 16)
+        lay_root.setContentsMargins(18, 16, 18, 16)
         lay_root.setSpacing(8)
         lay_root.addWidget(step("2 · PASTA RAIZ DOS DESTINOS"))
         self.pasta_raiz_label = muted("Nenhuma pasta selecionada")
         lay_root.addWidget(self.pasta_raiz_label)
         btn_select_root_folder = QPushButton("Selecionar pasta raiz")
+        btn_select_root_folder.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_select_root_folder.clicked.connect(self.on_select_root_folder)
         lay_root.addWidget(btn_select_root_folder)
         fixed_layout.addWidget(card_root)
@@ -80,11 +82,17 @@ class AbaMultiCopiador(QWidget):
         self.pastas_list_widget = QListWidget()
         self.pastas_list_widget.setMinimumHeight(220)
         self.pastas_list_widget.itemChanged.connect(self._update_dest_count)
+        self._empty_state = QLabel("Selecione a pasta raiz para listar as subpastas de destino.")
+        self._empty_state.setObjectName("Muted")
+        self._empty_state.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._empty_state.setVisible(False)
         lay_dest.addWidget(self.pastas_list_widget, 1)
+        lay_dest.addWidget(self._empty_state, 1)
 
         lay_dest.addWidget(separator())
         btn_copiar = QPushButton("Copiar arquivo para pastas selecionadas")
         btn_copiar.setObjectName("PrimaryButton")
+        btn_copiar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_copiar.setMinimumHeight(40)
         btn_copiar.clicked.connect(self.on_copy_files)
         lay_dest.addWidget(btn_copiar)
@@ -112,8 +120,13 @@ class AbaMultiCopiador(QWidget):
     def popular_lista_pastas(self):
         self.pastas_list_widget.clear()
         self.subpastas_encontradas = []
+        self._empty_state.setVisible(False)
+        self.pastas_list_widget.setVisible(True)
+        self.dest_count.setText("")
 
-        if not self.pasta_raiz: return
+        if not self.pasta_raiz:
+            self._show_empty("Selecione a pasta raiz para listar as subpastas de destino.")
+            return
 
         try:
             for nome in os.listdir(self.pasta_raiz):
@@ -122,7 +135,7 @@ class AbaMultiCopiador(QWidget):
                     self.subpastas_encontradas.append(caminho_completo)
             
             if not self.subpastas_encontradas:
-                self.pastas_list_widget.addItem("Nenhuma subpasta encontrada.")
+                self._show_empty("Nenhuma subpasta encontrada nesta pasta raiz.")
                 return
 
             for caminho_pasta in sorted(self.subpastas_encontradas):
@@ -140,6 +153,11 @@ class AbaMultiCopiador(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Erro", f"Não foi possível ler as subpastas: {e}")
+
+    def _show_empty(self, text):
+        self._empty_state.setText(text)
+        self._empty_state.setVisible(True)
+        self.pastas_list_widget.setVisible(False)
 
     def on_toggle_select_all(self, checked):
         state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked

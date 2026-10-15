@@ -30,8 +30,8 @@ QLabel#LoginTitle { font-size: 20px; font-weight: 700; color: #e9e9e9; }
 QLabel#LoginSub { font-size: 13px; color: #9a9a9a; }
 QPushButton#NavButton {
     text-align: left; border: 1px solid transparent; border-radius: 8px;
-    padding: 9px 11px; color: #9a9a9a; font-size: 13px; font-weight: 500;
-    background: transparent;
+    padding: 9px 12px; color: #9a9a9a; font-size: 13px; font-weight: 500;
+    background: transparent; min-width: 0;
 }
 QPushButton#NavButton:hover { background: #262626; color: #e9e9e9; }
 QPushButton#NavButton:checked { background: rgba(99,102,241,0.16); color: #a5b4fc; font-weight: 600; }
@@ -44,6 +44,9 @@ QPushButton:pressed { background: #333333; }
 QPushButton:disabled { color: #6b6b6b; background: #202020; border-color: #2a2a2a; }
 QPushButton#IconButton { background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 4px; }
 QPushButton#IconButton:hover { background: #262626; border-color: #333333; }
+QPushButton#StepButton { background: transparent; border: 1px solid #2a2a2a; border-radius: 8px; padding: 8px 18px; color: #8f8f8f; font-size: 12px; font-weight: 600; }
+QPushButton#StepButton:hover { background: #262626; color: #e9e9e9; }
+QPushButton#StepButton:checked { background: rgba(99,102,241,0.16); color: #a5b4fc; border-color: #6366f1; }
 QPushButton#PrimaryButton { background: #6366f1; color: #ffffff; border: 1px solid #6366f1; font-weight: 600; }
 QPushButton#PrimaryButton:hover { background: #818cf8; border-color: #818cf8; }
 QPushButton#PrimaryButton:disabled { background: #2e2e2e; border-color: #2e2e2e; color: #6b6b6b; }
@@ -66,10 +69,12 @@ QTableWidget {
 }
 QTableWidget::item { padding: 4px; }
 QTableWidget::item:selected { background: rgba(99,102,241,0.28); color: #ffffff; }
+QHeaderView { height: 34px; }
 QHeaderView::section {
     background: #1e1e1e; color: #8f8f8f; border: none;
-    border-bottom: 1px solid #2a2a2a; padding: 7px; font-size: 11px; font-weight: 600;
+    border-bottom: 1px solid #2a2a2a; padding: 7px 10px; font-size: 11px; font-weight: 600;
 }
+QTableCornerButton::section { background: #1e1e1e; border: none; }
 QCheckBox { font-size: 13px; color: #d6d6d6; spacing: 8px; }
 QCheckBox::indicator { width: 15px; height: 15px; border-radius: 4px; border: 1px solid #4a4a4a; background: #262626; }
 QCheckBox::indicator:checked { background: #6366f1; border: 1px solid #6366f1; }

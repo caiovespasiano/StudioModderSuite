@@ -203,13 +203,13 @@ class AbaOtimizadorTGA(QWidget):
         coluna_direita.setContentsMargins(16, 16, 16, 16)
         coluna_direita.setSpacing(8)
         head = QHBoxLayout()
+        head.setSpacing(10)
         head.addWidget(step("RESULTADOS"))
-        head.addStretch()
         self.results_count = muted("")
         head.addWidget(self.results_count)
-        head.addWidget(field("Filtro"))
+        head.addStretch()
         self.combo_filter = QComboBox()
-        self.combo_filter.setFixedWidth(210)
+        self.combo_filter.setFixedWidth(190)
         self.combo_filter.addItem("Mostrar Tudo", "ALL")
         self.combo_filter.addItem("Somente Marcadas", "CHECKED")
         self.combo_filter.addItem("Somente 8192x8192", "8192")
@@ -223,10 +223,10 @@ class AbaOtimizadorTGA(QWidget):
 
         self.tabela_texturas = QTableWidget()
         self.tabela_texturas.setColumnCount(5); self.tabela_texturas.setHorizontalHeaderLabels(["", "Arquivo", "Res. Atual", "Modo", "Nova Res."])
-        self.tabela_texturas.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch); self.tabela_texturas.setColumnWidth(0, 30); self.tabela_texturas.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.tabela_texturas.setSortingEnabled(True)
+        self._style_texture_table()
         coluna_direita.addWidget(self.tabela_texturas, 1)
         coluna_direita.addWidget(hint("Amarelo = redimensiona · desmarque o que quiser manter"))
+        self._style_texture_table()
         layout_principal.addWidget(right_panel, 1)
 
         # Conexões de Preview
@@ -235,6 +235,18 @@ class AbaOtimizadorTGA(QWidget):
         self.check_force_pot.toggled.connect(self.update_preview) # Atualiza ao marcar
         
         self.default_text_brush = self.tabela_texturas.palette().brush(QPalette.ColorRole.Text)
+
+    def _style_texture_table(self):
+        """Coluna 'Arquivo' esticada, demais de largura fixa, sem cortar nomes."""
+        t = self.tabela_texturas
+        t.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        t.setShowGrid(False)
+        t.verticalHeader().setVisible(False)
+        t.horizontalHeader().setHighlightSections(False)
+        t.horizontalHeader().setSectionsClickable(False)
+        t.setSortingEnabled(True)
+        for col, w in {0: 34, 2: 104, 3: 92, 4: 108}.items():
+            t.setColumnWidth(col, w)
 
     def on_select_mod_folder(self):
         from ui_helpers import elide_label

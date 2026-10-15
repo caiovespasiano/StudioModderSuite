@@ -115,6 +115,7 @@ class JanelaPrincipal(QMainWindow):
             btn = QPushButton(title)
             btn.setObjectName("NavButton")
             btn.setCheckable(True)
+            btn.setMinimumWidth(200)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.clicked.connect(lambda _checked=False, idx=i: self.set_current_index(idx))
             self.nav_group.addButton(btn, i)
@@ -151,6 +152,7 @@ class JanelaPrincipal(QMainWindow):
         header_layout.addStretch()
 
         self.btn_history = QPushButton("Histórico")
+        self.btn_history.setMinimumWidth(104)
         self.btn_history.clicked.connect(self.show_history_dialog)
         header_layout.addWidget(self.btn_history)
 
