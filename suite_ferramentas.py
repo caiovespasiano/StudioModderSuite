@@ -1,27 +1,86 @@
 # suite_ferramentas.py
 import sys
 import os
-from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget, QPushButton, QDialog, QVBoxLayout, QTextEdit, QHBoxLayout, QMessageBox
-from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QPushButton, QDialog, QVBoxLayout,
+    QTextEdit, QHBoxLayout, QMessageBox, QStackedWidget, QLabel, QFrame,
+    QButtonGroup,
+)
+from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtCore import Qt
+
+from theme import apply_theme
 
 from aba_copiadora import AbaCopiadora
 from aba_renomeador import AbaRenomeador
 from aba_multi_copiador import AbaMultiCopiador
 from aba_otimizador_dds import AbaOtimizadorDDS
-# NOVA IMPORTAÇÃO
 from aba_otimizador_tga import AbaOtimizadorTGA
 from app_state import get_history, clear_history
+
+# Tokens ERP Hub6 proposta-1 (light clean) adaptados p/ QSS (ver theme.py).
+SECTION_SUBTITLES = {
+    "Copiador com Sequência": "Gere cópias em sequência a partir de um arquivo molde",
+    "Renomeador em Lote": "Renomeie vários arquivos para um padrão limpo",
+    "Copiador Múltiplo": "Copie um arquivo para várias pastas de uma vez",
+    "Otimizador DDS": "Redimensione e converta texturas .dds via texconv",
+    "Otimizador TGA": "Redimensione texturas .tga via Pillow",
+}
+
+
+def apply_theme(app=None):
+    from theme import apply_theme as _apply
+
+    _apply(app)
+
 
 class JanelaPrincipal(QMainWindow):
     def __init__(self):
         super().__init__()
+        apply_theme(QApplication.instance())
         self.setWindowTitle("Studio Modder Suite v1.0")
         self.resize(1280, 800)
-        
+        self.setMinimumSize(1100, 700)
+
         self.setWindowIcon(QIcon("meu_icone.ico"))
 
-        self.tabs = QTabWidget()
-        self.setCentralWidget(self.tabs)
+        root = QWidget()
+        root.setObjectName("AppRoot")
+        self.setCentralWidget(root)
+        root_layout = QHBoxLayout(root)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+
+        # ---- Sidebar (264px, como proposta ERP) ----
+        sidebar = QFrame()
+        sidebar.setObjectName("Sidebar")
+        sidebar.setFixedWidth(264)
+        side_layout = QVBoxLayout(sidebar)
+        side_layout.setContentsMargins(14, 20, 14, 14)
+        side_layout.setSpacing(4)
+
+        brand_row = QHBoxLayout()
+        brand_row.setSpacing(10)
+        logo_label = QLabel()
+        pix = QPixmap("logo_dimitrius.png")
+        if not pix.isNull():
+            logo_label.setPixmap(
+                pix.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            )
+        logo_label.setFixedSize(32, 32)
+        brand_row.addWidget(logo_label)
+        brand_text = QVBoxLayout()
+        brand_text.setSpacing(0)
+        brand_title = QLabel("Studio Modder")
+        brand_title.setObjectName("BrandTitle")
+        brand_sub = QLabel("SUITE")
+        brand_sub.setObjectName("BrandSub")
+        brand_text.addWidget(brand_title)
+        brand_text.addWidget(brand_sub)
+        brand_row.addLayout(brand_text)
+        brand_row.addStretch()
+        side_layout.addLayout(brand_row)
+        side_layout.addSpacing(14)
 
         self.tab_definitions = [
             ("Copiador com Sequência", AbaCopiadora),
@@ -32,15 +91,80 @@ class JanelaPrincipal(QMainWindow):
         ]
         self.loaded_tabs = [None] * len(self.tab_definitions)
 
-        for title, _factory in self.tab_definitions:
-            self.tabs.addTab(QWidget(), title)
+        self.nav_group = QButtonGroup(self)
+        self.nav_group.setExclusive(True)
+        self.nav_buttons = []
+        for i, (title, _factory) in enumerate(self.tab_definitions):
+            btn = QPushButton(title)
+            btn.setObjectName("NavButton")
+            btn.setCheckable(True)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(lambda _checked=False, idx=i: self.set_current_index(idx))
+            self.nav_group.addButton(btn, i)
+            side_layout.addWidget(btn)
+            self.nav_buttons.append(btn)
+
+        side_layout.addStretch()
+        credits = QLabel("v1.0 · Dimitrius Caio Vespasiano")
+        credits.setObjectName("Muted")
+        credits.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        side_layout.addWidget(credits)
+
+        root_layout.addWidget(sidebar)
+
+        # ---- Área principal: header + conteúdo ----
+        main_col = QWidget()
+        main_col.setObjectName("AppRoot")
+        main_layout = QVBoxLayout(main_col)
+        main_layout.setContentsMargins(28, 22, 28, 24)
+        main_layout.setSpacing(16)
+
+        header = QFrame()
+        header.setObjectName("HeaderBar")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(0, 0, 0, 14)
+        header_layout.setSpacing(12)
+
+        title_col = QVBoxLayout()
+        title_col.setSpacing(2)
+        self.section_title = QLabel(self.tab_definitions[0][0])
+        self.section_title.setObjectName("SectionTitle")
+        self.section_subtitle = QLabel(SECTION_SUBTITLES.get(self.tab_definitions[0][0], ""))
+        self.section_subtitle.setObjectName("SectionSubtitle")
+        title_col.addWidget(self.section_title)
+        title_col.addWidget(self.section_subtitle)
+        header_layout.addLayout(title_col)
+        header_layout.addStretch()
 
         self.btn_history = QPushButton("Histórico")
         self.btn_history.clicked.connect(self.show_history_dialog)
-        self.tabs.setCornerWidget(self.btn_history)
+        header_layout.addWidget(self.btn_history)
 
-        self.tabs.currentChanged.connect(self.ensure_tab_loaded)
-        self.ensure_tab_loaded(0)
+        main_layout.addWidget(header)
+
+        self.stack = QStackedWidget()
+        for _title, _factory in self.tab_definitions:
+            self.stack.addWidget(QWidget())
+        main_layout.addWidget(self.stack, 1)
+
+        root_layout.addWidget(main_col, 1)
+
+        # Compat: alguns testes antigos usam .tabs; mantém alias para o stack.
+        self.tabs = self.stack
+
+        self.nav_buttons[0].setChecked(True)
+        self.set_current_index(0)
+
+    def set_current_index(self, index):
+        if index < 0 or index >= len(self.tab_definitions):
+            return
+        self.ensure_tab_loaded(index)
+        self.stack.setCurrentIndex(index)
+        title = self.tab_definitions[index][0]
+        self.section_title.setText(title)
+        self.section_subtitle.setText(SECTION_SUBTITLES.get(title, ""))
+        if self.nav_buttons[index] is not None and not self.nav_buttons[index].isChecked():
+            self.nav_buttons[index].setChecked(True)
 
     def ensure_tab_loaded(self, index):
         if index < 0 or index >= len(self.tab_definitions):
@@ -51,9 +175,12 @@ class JanelaPrincipal(QMainWindow):
         _title, factory = self.tab_definitions[index]
         tab_widget = factory()
         self.loaded_tabs[index] = tab_widget
-        self.tabs.removeTab(index)
-        self.tabs.insertTab(index, tab_widget, self.tab_definitions[index][0])
-        self.tabs.setCurrentIndex(index)
+        old = self.stack.widget(index)
+        self.stack.removeWidget(old)
+        if old is not None:
+            old.deleteLater()
+        self.stack.insertWidget(index, tab_widget)
+        self.stack.setCurrentIndex(index)
 
     def show_history_dialog(self):
         dialog = QDialog(self)
@@ -61,6 +188,8 @@ class JanelaPrincipal(QMainWindow):
         dialog.resize(760, 480)
 
         layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(12)
         text_area = QTextEdit()
         text_area.setReadOnly(True)
 
@@ -82,6 +211,7 @@ class JanelaPrincipal(QMainWindow):
 
         btn_clear = QPushButton("Limpar Histórico")
         btn_close = QPushButton("Fechar")
+        btn_close.setObjectName("PrimaryButton")
 
         def on_clear():
             if QMessageBox.question(dialog, "Confirmar", "Deseja limpar todo o histórico?") == QMessageBox.StandardButton.Yes:
