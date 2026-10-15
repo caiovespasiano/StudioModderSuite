@@ -43,7 +43,9 @@ class Launcher(QWidget):
         # Logo com respiro: a arte encosta nas bordas do PNG, então o
         # pixmap é menor que o label para não parecer cortada.
         try:
-            pixmap = QPixmap(resource_path("logo_dimitrius.png"))
+            pixmap = QPixmap(resource_path("github_mark.svg"))
+            if pixmap.isNull():
+                pixmap = QPixmap(resource_path("meu_icone.ico"))
             if not pixmap.isNull():
                 scaled_pixmap = pixmap.scaled(72, 72, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 logo_label = QLabel()
@@ -88,9 +90,10 @@ class Launcher(QWidget):
 
         outer.addStretch()
 
-        credits_label = QLabel("Desenvolvido por: Dimitrius Caio Vespasiano")
-        credits_label.setObjectName("Muted")
+        credits_label = QLabel('<a href="https://github.com/caiovespasiano/StudioModderSuite" style="color:#a5b4fc;">github.com/caiovespasiano/StudioModderSuite</a>')
+        credits_label.setObjectName("Link")
         credits_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        credits_label.setOpenExternalLinks(True)
         outer.addWidget(credits_label)
 
 

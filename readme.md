@@ -1,6 +1,6 @@
   STUDIO MODDER SUITE v1.0
 ===============================
-Desenvolvido por: Dimitrius Caio Vespasiano
+Repositório: https://github.com/caiovespasiano/StudioModderSuite
 
 
 Este e um conjunto de ferramentas para ajudar a automatizar tarefas

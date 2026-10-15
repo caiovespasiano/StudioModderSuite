@@ -62,7 +62,9 @@ class JanelaPrincipal(QMainWindow):
         brand_row = QHBoxLayout()
         brand_row.setSpacing(10)
         logo_label = QLabel()
-        pix = QPixmap("logo_dimitrius.png")
+        pix = QPixmap("github_mark.svg")
+        if pix.isNull():
+            pix = QPixmap("meu_icone.ico")
         if not pix.isNull():
             logo_label.setPixmap(
                 pix.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
@@ -106,9 +108,10 @@ class JanelaPrincipal(QMainWindow):
             self.nav_buttons.append(btn)
 
         side_layout.addStretch()
-        credits = QLabel("v1.0 · Dimitrius Caio Vespasiano")
-        credits.setObjectName("Muted")
+        credits = QLabel('<a href="https://github.com/caiovespasiano/StudioModderSuite" style="color:#a5b4fc;">github.com/caiovespasiano/StudioModderSuite</a>')
+        credits.setObjectName("Link")
         credits.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        credits.setOpenExternalLinks(True)
         side_layout.addWidget(credits)
 
         root_layout.addWidget(sidebar)
