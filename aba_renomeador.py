@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QMessageBox
 )
 from PySide6.QtCore import Qt
+from app_state import append_history
 
 class BlockItem:
     def __init__(self, text, type_="prefix", config=None):
@@ -195,6 +196,11 @@ class AbaRenomeador(QWidget):
         msg_final = f"{renomeados} arquivos renomeados com sucesso."
         if erros:
             msg_final += f"\n\nFalha ao renomear {len(erros)} arquivos:\n" + "\n".join(erros)
+        append_history(
+            "Renomeador em Lote",
+            "Renomeação",
+            f"Arquivos selecionados: {len(self.arquivos_selecionados)} | Renomeados: {renomeados} | Erros: {len(erros)}"
+        )
         QMessageBox.information(self, "Concluído", msg_final)
         
         self.arquivos_selecionados = []

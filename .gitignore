@@ -1,6 +1,7 @@
-__pycache__
-.venv
+__pycache__/
+*.pyc
+.venv/
 build/
 dist/
-tools/texconv/texconv.exe
-tools/texconv/LICENSE.txt
+studio_modder_state.json
+# NOTA: tools/texconv/ é intencionalmente versionado (o Otimizador DDS precisa do texconv.exe).

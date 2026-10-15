@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor, QTextFormat, QTextCharFormat, QFont
+from app_state import append_history
 
 # ... (As classes BlockItem, BlockBuilderDialog, AssemblyList, HoverTextEdit não mudam) ...
 class BlockItem:
@@ -327,6 +328,11 @@ class AbaCopiadora(QWidget):
                         shutil.copy2(self.selected_file, out_path)
                 generated += 1
             except Exception as ex: QMessageBox.warning(self, "Erro", f"Falha ao gravar {out_path}: {ex}"); break
+        append_history(
+            "Copiador com Sequência",
+            "Geração de arquivos",
+            f"Base: {os.path.basename(self.selected_file)} | Gerados: {generated}/{qty} | Interno ativo: {'sim' if self.internal_check.isChecked() else 'não'}"
+        )
         QMessageBox.information(self, "Concluído", f"{generated} de {qty} arquivos gerados com sucesso.")
 
     # ####################################################

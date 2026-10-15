@@ -5,13 +5,6 @@ from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, Q
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QPixmap
 
-# Importa a janela principal da nossa suíte de ferramentas
-try:
-    from suite_ferramentas import JanelaPrincipal as JanelaFerramentas
-except ImportError:
-    QMessageBox.critical(None, "Erro Crítico", "Não foi possível encontrar o arquivo 'suite_ferramentas.py'.\nVerifique se o arquivo está na mesma pasta.")
-    sys.exit()
-
 # ####################################################
 # ##       FUNÇÃO CRÍTICA PARA A COMPILAÇÃO (.EXE)  ##
 # ####################################################
@@ -85,9 +78,20 @@ class Launcher(QWidget):
 
     def abrir_suite_ferramentas(self):
         if not self.janela_ferramentas:
-            self.janela_ferramentas = JanelaFerramentas()
-        self.janela_ferramentas.show() 
-        self.close() 
+            try:
+                from suite_ferramentas import JanelaPrincipal as JanelaFerramentas
+                self.janela_ferramentas = JanelaFerramentas()
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Erro Crítico",
+                    "Não foi possível abrir a suíte de ferramentas.\n\n"
+                    f"Detalhes: {e}"
+                )
+                return
+
+        self.janela_ferramentas.show()
+        self.close()
 
 
 if __name__ == "__main__":

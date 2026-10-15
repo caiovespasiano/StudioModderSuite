@@ -6,9 +6,16 @@ Desenvolvido por: Dimitrius Caio Vespasiano
 Este e um conjunto de ferramentas para ajudar a automatizar tarefas
 chatas de modding, como copiar ou renomear muitos arquivos de uma so vez.
 
-O programa tem duas ferramentas principais:
+O programa tem cinco ferramentas principais:
 1. Copiador com Sequencia
 2. Renomeador em Lote
+3. Copiador Multiplo
+4. Otimizador DDS (via texconv)
+5. Otimizador TGA (via Pillow)
+
+Recursos transversais: Presets por ferramenta e Historico de operacoes
+(ver secoes 6 e 7). O estado local fica em studio_modder_state.json,
+que nao e versionado.
 
 
 ---------------------------------
@@ -168,3 +175,60 @@ Este programa e seguro para QUALQUER TIPO DE ARQUIVO.
     arquivos de texto LEGIVEIS (descriptografados). Tentar
     editar um arquivo ja criptografado como se fosse texto
     ira corrompe-lo.
+
+
+---------------------------------
+3. COPIADOR MULTIPLO
+---------------------------------
+Use esta aba para copiar UM arquivo para VARIAS pastas de uma vez.
+Selecione o arquivo fonte, marque as pastas destino e execute.
+O resultado e registrado no Historico.
+
+
+---------------------------------
+4. OTIMIZADOR DDS (texconv)
+---------------------------------
+Escaneia uma pasta do mod em busca de .dds, mostra resolucao/formato
+atual e calcula preview de redimensionamento/conversao.
+
+Requer tools/texconv/texconv.exe (ja incluso neste repositorio).
+Se o exe nao for encontrado, use "Localizar texconv.exe" na aba.
+Formatos: BC1_UNORM, BC3_UNORM, BC5_UNORM, BC7_UNORM ou manter original.
+Opcao "Proteger Alfas Modificados" evita converter DXT5 com alpha
+real para DXT1 (escaneamento fica mais lento).
+
+
+---------------------------------
+5. OTIMIZADOR TGA (Pillow)
+---------------------------------
+Escaneia .tga via Pillow, mostra resolucao/modo e calcula preview
+de redimensionamento. Suporta forcar POT e compressao RLE.
+
+
+---------------------------------
+6. PRESETS E HISTORICO
+---------------------------------
+- PRESETS (DDS e TGA): salvam threshold, dimensao alvo, formato,
+  flags e filtro atual. Ficam em studio_modder_state.json.
+- HISTORICO: botao "Historico" no canto da area de abas mostra as
+  ultimas 300 operacoes (copias, renomeacoes, scans, otimizacoes)
+  com data/hora. Pode ser limpo pelo dialogo.
+
+
+---------------------------------
+INSTALACAO / EXECUCAO
+---------------------------------
+Requer Python 3.10+ e as dependencias de requirements.txt:
+
+  python -m venv .venv
+  .venv\Scripts\activate
+  pip install -r requirements.txt
+  python main.py
+
+Arquivos locais nao versionados:
+- studio_modder_state.json (presets + historico, gerado no primeiro uso)
+- __pycache__/, .venv/, build/, dist/
+
+Para gerar o .exe: PyInstaller com StudioModderSuite.spec
+(pyinstaller StudioModderSuite.spec), que ja inclui icone, logo,
+texconv e os imports das abas.

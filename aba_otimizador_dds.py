@@ -9,10 +9,11 @@ import traceback
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QComboBox, QLineEdit, QListWidget, QListWidgetItem,
-    QMessageBox, QFrame, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView
+    QMessageBox, QFrame, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView, QInputDialog
 )
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QEvent
 from PySide6.QtGui import QColor, QBrush, QPalette
+from app_state import get_presets, set_preset, delete_preset, append_history
 
 # --- THREAD PARA TAREFAS PESADAS ---
 class WorkerThread(QThread):
@@ -107,10 +108,10 @@ class WorkerThread(QThread):
             command = [
                 f'"{self.texconv_path}"', "-y", "-o", f'"{output_path}"',
                 "-w", str(new_w), "-h", str(new_h),
-                "-f", new_format,
-                "-m", "0",
-                f'"{file_path}"'
             ]
+            if new_format:
+                command += ["-f", new_format]
+            command += ["-m", "0", f'"{file_path}"']
             command_str = " ".join(command)
             try:
                 result = subprocess.run(command_str, check=True, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
@@ -142,6 +143,8 @@ class AbaOtimizadorDDS(QWidget):
         self.mod_folder_path = ""
         self.texconv_path = ""
         self.worker_thread = None
+        self.scan_results = []
+        self.last_optimize_total = 0
         
         self.is_dragging_checkbox = False
         self.drag_check_state = Qt.CheckState.Unchecked
@@ -149,6 +152,7 @@ class AbaOtimizadorDDS(QWidget):
         
         self.setup_ui()
         self.check_for_local_texconv()
+        self.refresh_presets()
 
     def setup_ui(self):
         layout_principal = QHBoxLayout(self); layout_principal.setContentsMargins(12, 12, 12, 12); layout_principal.setSpacing(10)
@@ -191,6 +195,21 @@ class AbaOtimizadorDDS(QWidget):
                                             "AVISO: Torna o escaneamento MUITO mais lento.")
         self.check_protect_alpha.setChecked(True)
         coluna_esquerda.addWidget(self.check_protect_alpha)
+
+        preset_layout = QHBoxLayout()
+        preset_layout.addWidget(QLabel("Preset:"))
+        self.combo_presets = QComboBox()
+        self.btn_save_preset = QPushButton("Salvar Preset")
+        self.btn_load_preset = QPushButton("Carregar")
+        self.btn_delete_preset = QPushButton("Excluir")
+        self.btn_save_preset.clicked.connect(self.on_save_preset)
+        self.btn_load_preset.clicked.connect(self.on_load_preset)
+        self.btn_delete_preset.clicked.connect(self.on_delete_preset)
+        preset_layout.addWidget(self.combo_presets, 1)
+        preset_layout.addWidget(self.btn_save_preset)
+        preset_layout.addWidget(self.btn_load_preset)
+        preset_layout.addWidget(self.btn_delete_preset)
+        coluna_esquerda.addLayout(preset_layout)
         
         separator2 = QFrame(); separator2.setFrameShape(QFrame.Shape.HLine); separator2.setFrameShadow(QFrame.Shadow.Sunken); coluna_esquerda.addWidget(separator2)
         coluna_esquerda.addWidget(QLabel("<b>4. Ação:</b>")); self.btn_scan = QPushButton("1. Escanear Texturas (Gerar Preview)"); self.btn_scan.clicked.connect(self.on_scan_textures)
@@ -199,6 +218,16 @@ class AbaOtimizadorDDS(QWidget):
         
         coluna_direita = QVBoxLayout(); coluna_direita.setContentsMargins(10, 0, 0, 0)
         coluna_direita.addWidget(QLabel("<b>Resultados do Escaneamento:</b>")); self.checkbox_select_all = QCheckBox("Selecionar Todas / Nenhuma"); self.checkbox_select_all.toggled.connect(self.on_toggle_select_all); coluna_direita.addWidget(self.checkbox_select_all)
+        filter_layout = QHBoxLayout()
+        filter_layout.addWidget(QLabel("Filtro:"))
+        self.combo_filter = QComboBox()
+        self.combo_filter.addItem("Mostrar Tudo", "ALL")
+        self.combo_filter.addItem("Somente Marcadas", "CHECKED")
+        self.combo_filter.addItem("Somente 8192x8192", "8192")
+        self.combo_filter.addItem("Somente para Otimizar", "TO_OPTIMIZE")
+        self.combo_filter.currentIndexChanged.connect(self.update_preview)
+        filter_layout.addWidget(self.combo_filter, 1)
+        coluna_direita.addLayout(filter_layout)
         self.tabela_texturas = QTableWidget()
         self.tabela_texturas.setColumnCount(6); self.tabela_texturas.setHorizontalHeaderLabels(["", "Arquivo", "Res. Atual", "Formato Atual", "Nova Res.", "Novo Formato"])
         self.tabela_texturas.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch); self.tabela_texturas.setColumnWidth(0, 30); self.tabela_texturas.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -235,8 +264,73 @@ class AbaOtimizadorDDS(QWidget):
     def on_toggle_select_all(self, checked):
         state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
         for i in range(self.tabela_texturas.rowCount()):
+            if self.tabela_texturas.isRowHidden(i):
+                continue
             item = self.tabela_texturas.item(i, 0)
             if item: item.setCheckState(state)
+
+    def refresh_presets(self):
+        self.combo_presets.clear()
+        presets = get_presets("dds")
+        self.combo_presets.addItem("(Nenhum)")
+        for name in sorted(presets.keys()):
+            self.combo_presets.addItem(name)
+
+    def on_save_preset(self):
+        name, ok = QInputDialog.getText(self, "Salvar Preset", "Nome do preset:")
+        if not ok or not name.strip():
+            return
+        payload = {
+            "res_from": self.combo_res_from.currentText(),
+            "res_to": self.combo_res_to.currentData(),
+            "format_to": self.combo_format_to.currentData(),
+            "protect_alpha": self.check_protect_alpha.isChecked(),
+            "filter": self.combo_filter.currentData(),
+        }
+        set_preset("dds", name.strip(), payload)
+        self.refresh_presets()
+        idx = self.combo_presets.findText(name.strip())
+        if idx >= 0:
+            self.combo_presets.setCurrentIndex(idx)
+
+    def on_load_preset(self):
+        name = self.combo_presets.currentText()
+        if not name or name == "(Nenhum)":
+            return
+        preset = get_presets("dds").get(name)
+        if not preset:
+            return
+
+        self.combo_res_from.setCurrentText(str(preset.get("res_from", self.combo_res_from.currentText())))
+
+        res_to_value = preset.get("res_to", self.combo_res_to.currentData())
+        for i in range(self.combo_res_to.count()):
+            if self.combo_res_to.itemData(i) == res_to_value:
+                self.combo_res_to.setCurrentIndex(i)
+                break
+
+        format_value = preset.get("format_to", self.combo_format_to.currentData())
+        for i in range(self.combo_format_to.count()):
+            if self.combo_format_to.itemData(i) == format_value:
+                self.combo_format_to.setCurrentIndex(i)
+                break
+
+        self.check_protect_alpha.setChecked(bool(preset.get("protect_alpha", True)))
+
+        filter_value = preset.get("filter", "ALL")
+        for i in range(self.combo_filter.count()):
+            if self.combo_filter.itemData(i) == filter_value:
+                self.combo_filter.setCurrentIndex(i)
+                break
+
+        self.update_preview()
+
+    def on_delete_preset(self):
+        name = self.combo_presets.currentText()
+        if not name or name == "(Nenhum)":
+            return
+        delete_preset("dds", name)
+        self.refresh_presets()
 
     def calculate_new_dims(self, width, height, threshold, new_max_dim_code):
         current_max_dim = max(width, height)
@@ -264,6 +358,8 @@ class AbaOtimizadorDDS(QWidget):
 
     @Slot(list)
     def on_scan_finished(self, results):
+        self.scan_results = results
+        self.tabela_texturas.setSortingEnabled(False)
         self.tabela_texturas.setRowCount(len(results))
         self.tabela_texturas.blockSignals(True)
         
@@ -289,7 +385,9 @@ class AbaOtimizadorDDS(QWidget):
             self.tabela_texturas.setItem(row, 5, new_format_item)
         
         self.tabela_texturas.blockSignals(False)
+        self.tabela_texturas.setSortingEnabled(True)
         self.btn_scan.setEnabled(True)
+        append_history("Otimizador DDS", "Scan", f"Texturas encontradas: {len(results)}")
         
         self.update_preview()
         self.status_label.setText(f"Escaneamento concluído! {len(results)} texturas encontradas.")
@@ -305,8 +403,10 @@ class AbaOtimizadorDDS(QWidget):
         new_max_dim_code = self.combo_res_to.currentData()
         format_desejado = self.combo_format_to.currentData()
         protect_alpha_enabled = self.check_protect_alpha.isChecked()
+        filter_mode = self.combo_filter.currentData() if hasattr(self, "combo_filter") else "ALL"
         
         files_to_optimize = 0
+        visible_rows = 0
 
         for row in range(self.tabela_texturas.rowCount()):
             check_item = self.tabela_texturas.item(row, 0)
@@ -338,6 +438,18 @@ class AbaOtimizadorDDS(QWidget):
                     
             needs_resize = (new_dims is not None)
             needs_optimization = needs_resize or needs_format_change
+
+            should_show = True
+            if filter_mode == "CHECKED":
+                should_show = needs_optimization
+            elif filter_mode == "8192":
+                should_show = (width == 8192 and height == 8192)
+            elif filter_mode == "TO_OPTIMIZE":
+                should_show = needs_optimization
+
+            self.tabela_texturas.setRowHidden(row, not should_show)
+            if should_show:
+                visible_rows += 1
             
             name_item.setForeground(self.default_text_brush)
             new_res_item.setForeground(self.default_text_brush)
@@ -360,7 +472,7 @@ class AbaOtimizadorDDS(QWidget):
                     new_format_item.setForeground(QColor("cyan"))
                 
                 name_item.setData(Qt.ItemDataRole.UserRole + 1, (final_w, final_h))
-                name_item.setData(Qt.ItemDataRole.UserRole + 2, final_new_format_str.split(" ")[0])
+                name_item.setData(Qt.ItemDataRole.UserRole + 2, final_new_format_str.split(" ")[0] if needs_format_change else None)
                 
                 files_to_optimize += 1
             else:
@@ -375,8 +487,10 @@ class AbaOtimizadorDDS(QWidget):
                 name_item.setData(Qt.ItemDataRole.UserRole + 2, None)
 
         self.tabela_texturas.blockSignals(False)
+        self.checkbox_select_all.blockSignals(True)
         self.checkbox_select_all.setChecked(files_to_optimize > 0)
-        self.status_label.setText(f"{self.tabela_texturas.rowCount()} texturas. {files_to_optimize} para otimizar com as opções atuais.")
+        self.checkbox_select_all.blockSignals(False)
+        self.status_label.setText(f"{visible_rows} visíveis de {self.tabela_texturas.rowCount()} texturas. {files_to_optimize} para otimizar com as opções atuais.")
         self.btn_optimize.setEnabled(files_to_optimize > 0)
 
 
@@ -403,7 +517,13 @@ class AbaOtimizadorDDS(QWidget):
 
         self.btn_scan.setEnabled(False); self.btn_optimize.setEnabled(False)
         self.status_label.setText("Escaneando, por favor aguarde...")
+        self.checkbox_select_all.blockSignals(True)
+        self.checkbox_select_all.setChecked(False)
+        self.checkbox_select_all.blockSignals(False)
+        self.tabela_texturas.setSortingEnabled(False)
+        self.tabela_texturas.clearContents()
         self.tabela_texturas.setRowCount(0)
+        self.scan_results = []
         
         self.worker_thread = WorkerThread(
             mode="scan",
@@ -419,6 +539,7 @@ class AbaOtimizadorDDS(QWidget):
     def on_optimize_finished(self, final_message):
         self.btn_scan.setEnabled(True); self.btn_optimize.setEnabled(False)
         self.status_label.setText("Otimização concluída. Faça um novo scan para ver os resultados.")
+        append_history("Otimizador DDS", "Otimização", f"Selecionadas: {self.last_optimize_total} | {final_message.splitlines()[0] if final_message else ''}")
         QMessageBox.information(self, "Otimização Concluída", final_message)
         self.tabela_texturas.setRowCount(0)
 
@@ -442,10 +563,7 @@ class AbaOtimizadorDDS(QWidget):
                 
                 file_path = file_path_data[0]
                 
-                if new_format_data:
-                    new_format = new_format_data
-                else: 
-                    new_format = format_item_atual.text().split(" ")[0]
+                new_format = new_format_data  # None quando formato deve ser mantido
                 
                 if new_dims_data:
                     final_w, final_h = new_dims_data
@@ -460,6 +578,7 @@ class AbaOtimizadorDDS(QWidget):
         if not files_to_process:
             QMessageBox.warning(self, "Aviso", "Nenhuma textura está marcada para otimização.")
             return
+        self.last_optimize_total = len(files_to_process)
 
         self.btn_scan.setEnabled(False); self.btn_optimize.setEnabled(False)
         self.status_label.setText("Otimizando, isso pode demorar...")

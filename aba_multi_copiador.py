@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QMessageBox, QFrame, QCheckBox
 )
 from PySide6.QtCore import Qt
+from app_state import append_history
 
 class AbaMultiCopiador(QWidget):
     def __init__(self):
@@ -169,4 +170,9 @@ class AbaMultiCopiador(QWidget):
         msg_final = f"{sucessos} cópias realizadas com sucesso."
         if erros:
             msg_final += f"\n\nFalha ao copiar para {len(erros)} pastas:\n" + "\n".join(erros)
+        append_history(
+            "Copiador Múltiplo",
+            "Cópia em lote",
+            f"Arquivo: {nome_arquivo_fonte} | Sucesso: {sucessos}/{len(pastas_selecionadas)} | Erros: {len(erros)}"
+        )
         QMessageBox.information(self, "Concluído", msg_final)

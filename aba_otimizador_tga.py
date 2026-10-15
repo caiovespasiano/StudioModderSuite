@@ -6,11 +6,12 @@ import traceback
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QComboBox, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
-    QMessageBox, QFrame
+    QMessageBox, QFrame, QInputDialog
 )
 from PySide6.QtCore import Qt, QThread, Signal, Slot
 from PySide6.QtGui import QColor, QPalette
 from PIL import Image # Biblioteca Pillow
+from app_state import get_presets, set_preset, delete_preset, append_history
 
 # --- THREAD PARA TAREFAS PESADAS ---
 class WorkerThread(QThread):
@@ -105,7 +106,10 @@ class AbaOtimizadorTGA(QWidget):
         self.mod_folder_path = ""
         self.worker_thread = None
         self.default_text_brush = None
+        self.scan_results = []
+        self.last_optimize_total = 0
         self.setup_ui()
+        self.refresh_presets()
 
     def setup_ui(self):
         layout_principal = QHBoxLayout(self); layout_principal.setContentsMargins(12, 12, 12, 12); layout_principal.setSpacing(10)
@@ -143,6 +147,21 @@ class AbaOtimizadorTGA(QWidget):
         self.check_rle.setToolTip("RLE diminui o tamanho do arquivo sem perder qualidade.\nRecomendado deixar marcado.")
         self.check_rle.setChecked(True)
         coluna_esquerda.addWidget(self.check_rle)
+
+        preset_layout = QHBoxLayout()
+        preset_layout.addWidget(QLabel("Preset:"))
+        self.combo_presets = QComboBox()
+        self.btn_save_preset = QPushButton("Salvar Preset")
+        self.btn_load_preset = QPushButton("Carregar")
+        self.btn_delete_preset = QPushButton("Excluir")
+        self.btn_save_preset.clicked.connect(self.on_save_preset)
+        self.btn_load_preset.clicked.connect(self.on_load_preset)
+        self.btn_delete_preset.clicked.connect(self.on_delete_preset)
+        preset_layout.addWidget(self.combo_presets, 1)
+        preset_layout.addWidget(self.btn_save_preset)
+        preset_layout.addWidget(self.btn_load_preset)
+        preset_layout.addWidget(self.btn_delete_preset)
+        coluna_esquerda.addLayout(preset_layout)
         
         separator2 = QFrame(); separator2.setFrameShape(QFrame.Shape.HLine); separator2.setFrameShadow(QFrame.Shadow.Sunken); coluna_esquerda.addWidget(separator2)
         
@@ -158,6 +177,16 @@ class AbaOtimizadorTGA(QWidget):
         coluna_direita = QVBoxLayout(); coluna_direita.setContentsMargins(10, 0, 0, 0)
         coluna_direita.addWidget(QLabel("<b>Resultados:</b>"))
         self.checkbox_select_all = QCheckBox("Selecionar Todas / Nenhuma"); self.checkbox_select_all.toggled.connect(self.on_toggle_select_all); coluna_direita.addWidget(self.checkbox_select_all)
+        filter_layout = QHBoxLayout()
+        filter_layout.addWidget(QLabel("Filtro:"))
+        self.combo_filter = QComboBox()
+        self.combo_filter.addItem("Mostrar Tudo", "ALL")
+        self.combo_filter.addItem("Somente Marcadas", "CHECKED")
+        self.combo_filter.addItem("Somente 8192x8192", "8192")
+        self.combo_filter.addItem("Somente para Redimensionar", "TO_OPTIMIZE")
+        self.combo_filter.currentIndexChanged.connect(self.update_preview)
+        filter_layout.addWidget(self.combo_filter, 1)
+        coluna_direita.addLayout(filter_layout)
         
         self.tabela_texturas = QTableWidget()
         self.tabela_texturas.setColumnCount(5); self.tabela_texturas.setHorizontalHeaderLabels(["", "Arquivo", "Res. Atual", "Modo", "Nova Res."])
@@ -181,8 +210,67 @@ class AbaOtimizadorTGA(QWidget):
     def on_toggle_select_all(self, checked):
         state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
         for i in range(self.tabela_texturas.rowCount()):
+            if self.tabela_texturas.isRowHidden(i):
+                continue
             item = self.tabela_texturas.item(i, 0)
             if item: item.setCheckState(state)
+
+    def refresh_presets(self):
+        self.combo_presets.clear()
+        presets = get_presets("tga")
+        self.combo_presets.addItem("(Nenhum)")
+        for name in sorted(presets.keys()):
+            self.combo_presets.addItem(name)
+
+    def on_save_preset(self):
+        name, ok = QInputDialog.getText(self, "Salvar Preset", "Nome do preset:")
+        if not ok or not name.strip():
+            return
+        payload = {
+            "res_from": self.combo_res_from.currentText(),
+            "res_to": self.combo_res_to.currentData(),
+            "force_pot": self.check_force_pot.isChecked(),
+            "use_rle": self.check_rle.isChecked(),
+            "filter": self.combo_filter.currentData(),
+        }
+        set_preset("tga", name.strip(), payload)
+        self.refresh_presets()
+        idx = self.combo_presets.findText(name.strip())
+        if idx >= 0:
+            self.combo_presets.setCurrentIndex(idx)
+
+    def on_load_preset(self):
+        name = self.combo_presets.currentText()
+        if not name or name == "(Nenhum)":
+            return
+        preset = get_presets("tga").get(name)
+        if not preset:
+            return
+
+        self.combo_res_from.setCurrentText(str(preset.get("res_from", self.combo_res_from.currentText())))
+        res_to_value = preset.get("res_to", self.combo_res_to.currentData())
+        for i in range(self.combo_res_to.count()):
+            if self.combo_res_to.itemData(i) == res_to_value:
+                self.combo_res_to.setCurrentIndex(i)
+                break
+
+        self.check_force_pot.setChecked(bool(preset.get("force_pot", False)))
+        self.check_rle.setChecked(bool(preset.get("use_rle", True)))
+
+        filter_value = preset.get("filter", "ALL")
+        for i in range(self.combo_filter.count()):
+            if self.combo_filter.itemData(i) == filter_value:
+                self.combo_filter.setCurrentIndex(i)
+                break
+
+        self.update_preview()
+
+    def on_delete_preset(self):
+        name = self.combo_presets.currentText()
+        if not name or name == "(Nenhum)":
+            return
+        delete_preset("tga", name)
+        self.refresh_presets()
 
     # ####################################################
     # ##               LÓGICA DE POT (POWER OF TWO)     ##
@@ -239,6 +327,7 @@ class AbaOtimizadorTGA(QWidget):
         self.scan_results = results 
         self.update_preview()
         self.btn_scan.setEnabled(True)
+        append_history("Otimizador TGA", "Scan", f"Texturas encontradas: {len(results)}")
 
     @Slot()
     def update_preview(self):
@@ -248,7 +337,9 @@ class AbaOtimizadorTGA(QWidget):
         threshold = int(self.combo_res_from.currentText())
         new_max_dim_code = self.combo_res_to.currentData()
         force_pot = self.check_force_pot.isChecked() # Pega o estado do checkbox
+        filter_mode = self.combo_filter.currentData() if hasattr(self, "combo_filter") else "ALL"
         files_to_optimize = 0
+        visible_rows = 0
         
         self.tabela_texturas.blockSignals(True)
         for row, (file_path, width, height, mode) in enumerate(self.scan_results):
@@ -267,12 +358,26 @@ class AbaOtimizadorTGA(QWidget):
                 name_item.setForeground(QColor("yellow")); new_res_item.setForeground(QColor("yellow"))
                 name_item.setData(Qt.ItemDataRole.UserRole + 1, (final_w, final_h))
                 files_to_optimize += 1
+                needs_optimization = True
             else:
                 new_res_item = QNumericTableWidgetItem("(Manter)", 0)
                 check_item.setCheckState(Qt.CheckState.Unchecked)
                 name_item.setForeground(self.default_text_brush)
                 new_res_item.setForeground(self.default_text_brush)
                 name_item.setData(Qt.ItemDataRole.UserRole + 1, None) 
+                needs_optimization = False
+
+            should_show = True
+            if filter_mode == "CHECKED":
+                should_show = needs_optimization
+            elif filter_mode == "8192":
+                should_show = (width == 8192 and height == 8192)
+            elif filter_mode == "TO_OPTIMIZE":
+                should_show = needs_optimization
+
+            self.tabela_texturas.setRowHidden(row, not should_show)
+            if should_show:
+                visible_rows += 1
 
             self.tabela_texturas.setItem(row, 0, check_item)
             self.tabela_texturas.setItem(row, 1, name_item)
@@ -281,8 +386,10 @@ class AbaOtimizadorTGA(QWidget):
             self.tabela_texturas.setItem(row, 4, new_res_item)
             
         self.tabela_texturas.blockSignals(False)
+        self.checkbox_select_all.blockSignals(True)
         self.checkbox_select_all.setChecked(files_to_optimize > 0)
-        self.status_label.setText(f"Concluído! {len(self.scan_results)} arquivos. {files_to_optimize} para redimensionar.")
+        self.checkbox_select_all.blockSignals(False)
+        self.status_label.setText(f"Concluído! {visible_rows} visíveis de {len(self.scan_results)} arquivos. {files_to_optimize} para redimensionar.")
         self.btn_optimize.setEnabled(files_to_optimize > 0)
 
     def on_scan_textures(self):
@@ -292,7 +399,12 @@ class AbaOtimizadorTGA(QWidget):
 
         self.btn_scan.setEnabled(False); self.btn_optimize.setEnabled(False)
         self.status_label.setText("Escaneando...")
+        self.checkbox_select_all.blockSignals(True)
+        self.checkbox_select_all.setChecked(False)
+        self.checkbox_select_all.blockSignals(False)
+        self.tabela_texturas.clearContents()
         self.tabela_texturas.setRowCount(0)
+        self.scan_results = []
         
         self.worker_thread = WorkerThread("scan", self.mod_folder_path)
         self.worker_thread.progress_update.connect(self.update_status)
@@ -303,6 +415,7 @@ class AbaOtimizadorTGA(QWidget):
     def on_optimize_finished(self, final_message):
         self.btn_scan.setEnabled(True); self.btn_optimize.setEnabled(False)
         self.status_label.setText("Otimização concluída.")
+        append_history("Otimizador TGA", "Otimização", f"Selecionadas: {self.last_optimize_total} | {final_message.splitlines()[0] if final_message else ''}")
         QMessageBox.information(self, "Sucesso", final_message)
         self.tabela_texturas.setRowCount(0)
         self.scan_results = [] 
@@ -320,6 +433,7 @@ class AbaOtimizadorTGA(QWidget):
                     files_to_process.append( (file_path, new_dims[0], new_dims[1]) )
         
         if not files_to_process: return
+        self.last_optimize_total = len(files_to_process)
 
         self.btn_scan.setEnabled(False); self.btn_optimize.setEnabled(False)
         self.status_label.setText("Processando...")
